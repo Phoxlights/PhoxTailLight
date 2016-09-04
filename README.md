@@ -19,3 +19,11 @@ Then update the makefile to point to your local copy of the makeEspArduino and t
     ESP_LIBS=$(HOME)/src/ArduinoEsp/libraries
 
 Finally, hook up your esp8266 and try `make upload`. Will it work? Probably!
+
+Releasing
+-----------
+Use the git flow release process. 
+
+Release checklist:
+* Build a new bin and put it in `build`
+* *After* release, bump the version in `VERSION`
