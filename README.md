@@ -9,9 +9,9 @@ There are a few tools required to develop this stuff:
 * [makeEspArduino makefile](https://github.com/plerup/makeEspArduino)
 * [ArduinoEsp](https://github.com/esp8266/Arduino)
 
-First, pull this repo. Be sure to include `--recursive` so that it will pull down submodules:
+First, clone this repo. Be sure to include `--recursive` so that it will pull down submodules:
 
-    git pull --recursive https://github.com/Phoxlights/PhoxTailLight.git
+    git clone --recursive https://github.com/Phoxlights/PhoxTailLight.git
 
 Then update the makefile to point to your local copy of the makeEspArduino and the ArduinoEsp repo:
 
