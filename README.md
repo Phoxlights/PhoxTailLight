@@ -25,5 +25,5 @@ Releasing
 Use the git flow release process. 
 
 Release checklist:
-* Build a new bin and put it in `build`
+* Build a new bin and put it in `build`. This can be done with `make build`.
 * *After* release, bump the version in `VERSION`
