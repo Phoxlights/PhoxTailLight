@@ -1,0 +1,6 @@
+[submodule "src/core"]
+	path = src/core
+	url = git@github.com:Phoxlights/PhoxCore.git
+[submodule "src/animate"]
+	path = src/animate
+	url = git@github.com:Phoxlights/PhoxAnimate.git
