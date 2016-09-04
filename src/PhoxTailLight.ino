@@ -1,16 +1,16 @@
-#include "loop.h"
-#include "taillight.h"
-#include "animator.h"
-#include "lightstrip.h"
-#include "statuslight.h"
-#include "alltransforms.h"
-#include "network.h"
-#include "ota.h"
-#include "digitalbutton.h"
-#include "eventReceiver.h"
-#include "eventRegistry.h"
-#include "objstore.h"
-#include "event.h"
+#include <alltransforms.h>
+#include <loop.h>
+#include <animator.h>
+#include <lightstrip.h>
+#include <statuslight.h>
+#include <network.h>
+#include <ota.h>
+#include <digitalbutton.h>
+#include <eventReceiver.h>
+#include <eventRegistry.h>
+#include <objstore.h>
+#include <event.h>
+#include <taillight.h>
 
 #define OTA_SSID "phoxlight"
 #define OTA_PASS "phoxlight"
