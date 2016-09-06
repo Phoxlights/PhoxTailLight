@@ -15,7 +15,8 @@ LIBS = $(ROOT)/libs \
 include $(ESP_MAKE)/makeEspArduino.mk
 
 build: all
-	cp $(MAIN_EXE) build
+	mkdir -p $(ROOT)/build && \
+	cp $(MAIN_EXE) $(ROOT)/build
 
 DEVICE = 0
 
