@@ -1,3 +1,4 @@
+#include <Esp.h>
 #include <alltransforms.h>
 #include <loop.h>
 #include <animator.h>
@@ -7,6 +8,7 @@
 #include <ota.h>
 #include <digitalbutton.h>
 #include <eventReceiver.h>
+#include <eventSender.h>
 #include <eventRegistry.h>
 #include <objstore.h>
 #include <event.h>
@@ -16,11 +18,31 @@
 #define OTA_PASS "phoxlight"
 #define OTA_HOSTNAME "phoxlightota"
 
+#define DB_VER 1
+#define EVENT_VER 2
+
 void asplode(char * err){
     Serial.printf("ERROR: %s\n", err);
     delay(1000);
     ESP.restart();
 }
+
+typedef struct Identity {
+    uint32_t model;
+    uint32_t serial;
+    uint16_t bin;
+    uint16_t eventVer;
+    uint16_t dbVer;
+} Identity;
+
+Identity id = {
+    .model = 1000,
+    .serial = ESP.getChipId(),
+    .bin = 7,
+    .eventVer = EVENT_VER,
+    .dbVer = DB_VER
+};
+
 
 typedef struct TailLightConfig {
     int numPx;
@@ -29,7 +51,6 @@ typedef struct TailLightConfig {
     char pass[PASS_MAX];
     char hostname[HOSTNAME_MAX];
     int eventPort;
-    int eventVer;
     int currentPreset;
     int offset;
     int buttonPin;
@@ -45,12 +66,11 @@ TailLightConfig defaultConfig = {
     "phoxlight",
     "phoxlight",
     6767,
-    1,
     0,
     0,
-    0, // pin 14 for production unit
+    14, // pin 14 for production unit
     2,
-    CONNECT
+    CONNECT,
 };
 
 int configId = 1;
@@ -83,7 +103,7 @@ int writeCurrentConfig(){
 
 int loadConfig(){
     // load from fs
-    objStoreInit(1);
+    objStoreInit(DB_VER);
     if(!objStoreGet("taillight", configId, &config, sizeof(TailLightConfig))){
         // store defaults
         Serial.println("taillight config not found, storing defaults");
@@ -104,7 +124,6 @@ config: {\n\
     ssid: %s,\n\
     hostname: %s,\n\
     eventPort: %i,\n\
-    eventVer: %i,\n\
     currentPreset: %i,\n\
     offset: %i,\n\
     buttonPin: %i,\n\
@@ -112,7 +131,7 @@ config: {\n\
     networkMode: %s,\n\
 }\n", 
     config.numPx, config.tailPin, config.ssid,
-    config.hostname, config.eventPort, config.eventVer,
+    config.hostname, config.eventPort,
     config.currentPreset, config.offset, config.buttonPin,
     config.statusPin, 
     config.networkMode == 0 ? "CONNECT" : config.networkMode == 1 ? "CREATE" : "OFF");
@@ -181,36 +200,37 @@ void flash(){
 bool signalOn = false;
 bool brakeOn = false;
 
-void startTurnSignalRight(Event * e){
+void startTurnSignalRight(Event * e, Request * r){
     signalOn = true;
     tailLightLayerStart(tailLight, SIGNAL_RIGHT);
     tailLightLayerStop(tailLight, RUNNING);
 }
-void stopTurnSignalRight(Event * e){
+void stopTurnSignalRight(Event * e, Request * r){
     signalOn = false;
     tailLightLayerStop(tailLight, SIGNAL_RIGHT);
     if(!signalOn && !brakeOn){
         tailLightLayerStart(tailLight, RUNNING);
     }
 }
-void startTurnSignalLeft(Event * e){
+void startTurnSignalLeft(Event * e, Request * r){
     signalOn = true;
     tailLightLayerStart(tailLight, SIGNAL_LEFT);
     tailLightLayerStop(tailLight, RUNNING);
 }
-void stopTurnSignalLeft(Event * e){
+void stopTurnSignalLeft(Event * e, Request * r){
     signalOn = false;
     tailLightLayerStop(tailLight, SIGNAL_LEFT);
     if(!signalOn && !brakeOn){
         tailLightLayerStart(tailLight, RUNNING);
     }
 }
-void startBrakeLayer(Event * e){
+void startBrakeLayer(Event * e, Request * r){
+    Serial.println("asdf");
     brakeOn = true;
     tailLightLayerStart(tailLight, BRAKE);
     tailLightLayerStop(tailLight, RUNNING);
 }
-void stopBrakeLayer(Event * e){
+void stopBrakeLayer(Event * e, Request * r){
     brakeOn = false;
     tailLightLayerStop(tailLight, BRAKE);
     if(!signalOn && !brakeOn){
@@ -218,7 +238,11 @@ void stopBrakeLayer(Event * e){
     }
 }
 
-void setTaillightOffset(Event * e){
+void setNextPreset(Event * e, Request * r){
+    nextPreset();
+}
+
+void setTaillightOffset(Event * e, Request * r){
     int newOffset = (config.offset+1) % config.numPx;
     Serial.printf("setting taillight offset to %i\n", newOffset); 
     tailLightSetOffset(tailLight, newOffset);
@@ -226,7 +250,7 @@ void setTaillightOffset(Event * e){
     writeCurrentConfig();
 }
 
-void setButtonPin(Event * e){
+void setButtonPin(Event * e, Request * r){
     int pin = (e->body[1] << 8) + e->body[0];
     Serial.printf("setting button pin to %i\n", pin); 
     config.buttonPin = pin;
@@ -235,7 +259,7 @@ void setButtonPin(Event * e){
     flash();
 }
 
-void setTaillightPin(Event * e){
+void setTaillightPin(Event * e, Request * r){
     int pin = (e->body[1] << 8) + e->body[0];
     Serial.printf("setting tail light pin to %i\n", pin); 
     config.tailPin = pin;
@@ -244,7 +268,7 @@ void setTaillightPin(Event * e){
     flash();
 }
 
-void setStatusPin(Event * e){
+void setStatusPin(Event * e, Request * r){
     int pin = (e->body[1] << 8) + e->body[0];
     Serial.printf("setting status pin to %i\n", pin); 
     config.statusPin = pin;
@@ -253,7 +277,7 @@ void setStatusPin(Event * e){
     flash();
 }
 
-void setNetworkMode(Event * e){
+void setNetworkMode(Event * e, Request * r){
     int mode = (e->body[1] << 8) + e->body[0];
     Serial.printf("setting network mode to %i\n", mode); 
     config.networkMode = (NetworkMode)mode;
@@ -262,7 +286,7 @@ void setNetworkMode(Event * e){
     flash();
 }
 
-void restoreDefaultConfig(Event * e){
+void restoreDefaultConfig(Event * e, Request * r){
     Serial.println("restoring default taillight config");
     if(!writeDefaultConfig()){
         Serial.println("could not restore default config");
@@ -273,17 +297,32 @@ void restoreDefaultConfig(Event * e){
     flash();
 }
 
-void ping(Event * e){
+void ping(Event * e, Request * r){
+    Serial.printf("got ping with requestId %i. I should respond\n", e->header->requestId);
+    Serial.printf("responding to %s:%i\n", r->remoteIP.toString().c_str(), r->remotePort);
+    if(!eventSendC(r->client, EVENT_VER, PONG, 0, NULL, NULL)){
+        Serial.printf("ruhroh");
+        return;
+    }
     flash();
 }
 
-void pauseTailLight(Event * e){
+//int eventSendC(WiFiClient * client, int version, int opCode, int length, void * body, int responseId){
+void who(Event * e, Request * r){
+    Serial.printf("someone wants to know who i am\n");
+    if(!eventSendC(r->client, EVENT_VER, WHO, sizeof(Identity), (void*)&id, NULL)){
+        Serial.printf("ruhroh");
+        return;
+    }
+}
+
+void pauseTailLight(Event * e, Request * r){
     if(!tailLightPause(tailLight)){
         Serial.println("couldn't pause the taillight");
     }
 }
 
-void resumeTailLight(Event * e){
+void resumeTailLight(Event * e, Request * r){
     if(!tailLightStart(tailLight)){
         Serial.println("couldn't resume the taillight");
     }
@@ -296,7 +335,7 @@ typedef struct Pixel {
     uint8_t b;
 } Pixel;
 
-void setPixel(Event * e){
+void setPixel(Event * e, Request * r){
     Pixel * p = (Pixel*)e->body;
     byte rgb[3] = {p->r, p->g, p->b};
     // TODO - make sure x is within bounds
@@ -343,10 +382,10 @@ void enterOTAMode(){
     // enable SET_NETWORK_MODE endpoint just in case it isnt,
     // this way a device with NETWORK_MODE off will be able to
     // be turned back on
-    eventReceiverStart(config.eventVer, config.eventPort);
-    eventReceiverRegister(SET_NETWORK_MODE, setNetworkMode);
-    Serial.printf("Listening for SET_NETWORK_MODE with eventVer: %i, eventPort: %i\n",
-        config.eventVer, config.eventPort);
+    eventListen(EVENT_VER, config.eventPort);
+    eventRegister(SET_NETWORK_MODE, setNetworkMode);
+    Serial.printf("Listening for SET_NETWORK_MODE with EVENT_VER: %i, eventPort: %i\n",
+        EVENT_VER, config.eventPort);
 
     // ota
     otaOnStart(&otaStarted);
@@ -429,27 +468,29 @@ void setup(){
         Serial.println("couldnt setup status light");
     }
 
-    if(eventReceiverStart(config.eventVer, config.eventPort)){
-        eventReceiverRegister(SIGNAL_R_ON, startTurnSignalRight);
-        eventReceiverRegister(SIGNAL_R_OFF, stopTurnSignalRight);
-        eventReceiverRegister(SIGNAL_L_ON, startTurnSignalLeft);
-        eventReceiverRegister(SIGNAL_L_OFF, stopTurnSignalLeft);
-        eventReceiverRegister(BRAKE_ON, startBrakeLayer);
-        eventReceiverRegister(BRAKE_OFF, stopBrakeLayer);
-        eventReceiverRegister(PING, ping);
+    if(eventListen(EVENT_VER, config.eventPort)){
+        eventRegister(SIGNAL_R_ON, startTurnSignalRight);
+        eventRegister(SIGNAL_R_OFF, stopTurnSignalRight);
+        eventRegister(SIGNAL_L_ON, startTurnSignalLeft);
+        eventRegister(SIGNAL_L_OFF, stopTurnSignalLeft);
+        eventRegister(BRAKE_ON, startBrakeLayer);
+        eventRegister(BRAKE_OFF, stopBrakeLayer);
+        eventRegister(PING, ping);
+        eventRegister(WHO, who);
+        eventRegister(NEXT_PRESET, setNextPreset);
 
         // these should eventually go to a safer API
         // (maybe in OTA mode only or something)
-        eventReceiverRegister(SET_TAILLIGHT_OFFSET, setTaillightOffset);
-        eventReceiverRegister(SET_TAILLIGHT_PIN, setTaillightPin);
-        eventReceiverRegister(SET_STATUS_PIN, setStatusPin);
-        eventReceiverRegister(SET_BUTTON_PIN, setButtonPin);
-        eventReceiverRegister(SET_DEFAULT_CONFIG, restoreDefaultConfig);
-        eventReceiverRegister(SET_NETWORK_MODE, setNetworkMode);
+        eventRegister(SET_TAILLIGHT_OFFSET, setTaillightOffset);
+        eventRegister(SET_TAILLIGHT_PIN, setTaillightPin);
+        eventRegister(SET_STATUS_PIN, setStatusPin);
+        eventRegister(SET_BUTTON_PIN, setButtonPin);
+        eventRegister(SET_DEFAULT_CONFIG, restoreDefaultConfig);
+        eventRegister(SET_NETWORK_MODE, setNetworkMode);
 
-        eventReceiverRegister(PAUSE_TAILLIGHT, pauseTailLight);
-        eventReceiverRegister(RESUME_TAILLIGHT, resumeTailLight);
-        eventReceiverRegister(SET_PIXEL, setPixel);
+        eventRegister(PAUSE_TAILLIGHT, pauseTailLight);
+        eventRegister(RESUME_TAILLIGHT, resumeTailLight);
+        eventRegister(SET_PIXEL, setPixel);
     }
 
     byte orange[3] = {20,20,0};

@@ -1,0 +1,37 @@
+0.1.8
+===========
+### Changes
+* add the concept of responses to events
+* add identity response
+
+### Config
+tail pin 2
+button pin 14
+status pin 2
+connects to network with ssid phoxlight, pass phoxlight
+hostname phoxlight
+ota mode (button hold), connects to ssid phoxlight, pass phoxlight
+ota hostname phoxlightota
+creates server at 192.168.4.1
+event version 2
+event port 6767
+db ver 1
+
+### Commands
+* ping
+* who
+* signalron
+* signalroff
+* signallon
+* signalloff
+* brakeon
+* brakeoff
+* setnextpreset
+* setdefaultconfig
+* setbuttonpin
+* settailpin
+* setstatuspin
+* settaillightoffset
+* setnetworkmode
+* pausetaillight
+* resumetaillight
