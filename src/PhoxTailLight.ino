@@ -18,8 +18,13 @@
 #define OTA_PASS "phoxlight"
 #define OTA_HOSTNAME "phoxlightota"
 
-#define DB_VER 1
+#define DB_VER 2
 #define EVENT_VER 2
+#define NUM_PX 16
+#define TAIL_PIN 2
+#define EVENT_PORT 6767
+#define BUTTON_PIN 14
+#define STATUS_PIN 2
 
 void asplode(char * err){
     Serial.printf("ERROR: %s\n", err);
@@ -43,33 +48,22 @@ Identity id = {
     .dbVer = DB_VER
 };
 
-
 typedef struct TailLightConfig {
-    int numPx;
-    int tailPin;
     char ssid[SSID_MAX];
     char pass[PASS_MAX];
     char hostname[HOSTNAME_MAX];
-    int eventPort;
     int currentPreset;
     int offset;
-    int buttonPin;
-    int statusPin;
     NetworkMode networkMode;
 } TailLightConfig;
 
 // default config values
 TailLightConfig defaultConfig = {
-    16,
-    2,
     "phoxlight",
     "phoxlight",
     "phoxlight",
-    6767,
     0,
     0,
-    14, // pin 14 for production unit
-    2,
     CONNECT,
 };
 
@@ -119,21 +113,14 @@ int loadConfig(){
 void logConfig(){
     Serial.printf("\
 config: {\n\
-    numPx: %i,\n\
-    tailPin: %i,\n\
     ssid: %s,\n\
     hostname: %s,\n\
-    eventPort: %i,\n\
     currentPreset: %i,\n\
     offset: %i,\n\
-    buttonPin: %i,\n\
-    statusPin: %i,\n\
     networkMode: %s,\n\
 }\n", 
-    config.numPx, config.tailPin, config.ssid,
-    config.hostname, config.eventPort,
-    config.currentPreset, config.offset, config.buttonPin,
-    config.statusPin, 
+    config.ssid, config.hostname,
+    config.currentPreset, config.offset,
     config.networkMode == 0 ? "CONNECT" : config.networkMode == 1 ? "CREATE" : "OFF");
 }
 
@@ -243,38 +230,11 @@ void setNextPreset(Event * e, Request * r){
 }
 
 void setTaillightOffset(Event * e, Request * r){
-    int newOffset = (config.offset+1) % config.numPx;
+    int newOffset = (config.offset+1) % NUM_PX;
     Serial.printf("setting taillight offset to %i\n", newOffset); 
     tailLightSetOffset(tailLight, newOffset);
     config.offset = newOffset;
     writeCurrentConfig();
-}
-
-void setButtonPin(Event * e, Request * r){
-    int pin = (e->body[1] << 8) + e->body[0];
-    Serial.printf("setting button pin to %i\n", pin); 
-    config.buttonPin = pin;
-    writeCurrentConfig();
-    delay(100);
-    flash();
-}
-
-void setTaillightPin(Event * e, Request * r){
-    int pin = (e->body[1] << 8) + e->body[0];
-    Serial.printf("setting tail light pin to %i\n", pin); 
-    config.tailPin = pin;
-    writeCurrentConfig();
-    delay(100);
-    flash();
-}
-
-void setStatusPin(Event * e, Request * r){
-    int pin = (e->body[1] << 8) + e->body[0];
-    Serial.printf("setting status pin to %i\n", pin); 
-    config.statusPin = pin;
-    writeCurrentConfig();
-    delay(100);
-    flash();
 }
 
 void setNetworkMode(Event * e, Request * r){
@@ -382,10 +342,10 @@ void enterOTAMode(){
     // enable SET_NETWORK_MODE endpoint just in case it isnt,
     // this way a device with NETWORK_MODE off will be able to
     // be turned back on
-    eventListen(EVENT_VER, config.eventPort);
+    eventListen(EVENT_VER, EVENT_PORT);
     eventRegister(SET_NETWORK_MODE, setNetworkMode);
     Serial.printf("Listening for SET_NETWORK_MODE with EVENT_VER: %i, eventPort: %i\n",
-        EVENT_VER, config.eventPort);
+        EVENT_VER, EVENT_PORT);
 
     // ota
     otaOnStart(&otaStarted);
@@ -409,9 +369,7 @@ void setup(){
     setupStartHeap = ESP.getFreeHeap();
     Serial.printf("setupStartHeap: %i\n", setupStartHeap);
 
-    // NOTE - config.statusPin is NOT used here
-    // because this needs to be guaranteed to work
-    status = statusLightCreate(2, 16);
+    status = statusLightCreate(STATUS_PIN, 16);
 
     byte purple[3] = {20,0,20};
     int pattern[] = {1000,50,0};
@@ -468,7 +426,7 @@ void setup(){
         Serial.println("couldnt setup status light");
     }
 
-    if(eventListen(EVENT_VER, config.eventPort)){
+    if(eventListen(EVENT_VER, EVENT_PORT)){
         eventRegister(SIGNAL_R_ON, startTurnSignalRight);
         eventRegister(SIGNAL_R_OFF, stopTurnSignalRight);
         eventRegister(SIGNAL_L_ON, startTurnSignalLeft);
@@ -482,9 +440,6 @@ void setup(){
         // these should eventually go to a safer API
         // (maybe in OTA mode only or something)
         eventRegister(SET_TAILLIGHT_OFFSET, setTaillightOffset);
-        eventRegister(SET_TAILLIGHT_PIN, setTaillightPin);
-        eventRegister(SET_STATUS_PIN, setStatusPin);
-        eventRegister(SET_BUTTON_PIN, setButtonPin);
         eventRegister(SET_DEFAULT_CONFIG, restoreDefaultConfig);
         eventRegister(SET_NETWORK_MODE, setNetworkMode);
 
@@ -499,7 +454,7 @@ void setup(){
     }
 
     // start up taillight
-    tailLight = tailLightCreate(config.tailPin, config.numPx, 1.0, config.offset);
+    tailLight = tailLightCreate(TAIL_PIN, NUM_PX, 1.0, config.offset);
     if(tailLight == NULL){
         asplode("couldnt create taillight");
     }
@@ -513,7 +468,7 @@ void setup(){
     statusLightStop(status);
 
     // switch presets
-    DigitalButton btn = buttonCreate(config.buttonPin, 200);
+    DigitalButton btn = buttonCreate(BUTTON_PIN, 200);
     buttonOnTap(btn, nextPreset);
     // OTA mode
     buttonOnUp(btn, neverOTAEver);
