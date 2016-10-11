@@ -3,9 +3,9 @@
 #include "presets.h"
 #include "objstore.h"
 #include "defaultPresets.h"
+#include "animator.h"
 #include "blendingmode.h"
-
-#define ARRAY_SIZE(x) ((sizeof x) / (sizeof *x))
+#include "alltransforms.h"
 
 /*
  * When adding new default presets, make sure any transform configs
@@ -14,6 +14,7 @@
  * TODO - some sort of registration to more elegantly handle this
  */
 
+// presets loaded from filesystem
 static int writeSpinnyPreset(){
 
     byte bitmapData[] = {
@@ -153,254 +154,6 @@ static int writeSpinnyPreset(){
     }
 
     return presetId;
-
-
-}
-
-static int writeFirePreset(){
-
-    byte bitmapData[] = {
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-        255, 100, 0, 255,
-    };
-
-    BitmapConfig bitmap = {
-        16, 1, {.ptr=(void*)&bitmapData}
-    };
-
-    TransformFireConfig transformConfig = {
-        2, 4
-    };
-
-    TransformConfig transform = {
-        FIRE,
-        {.ptr=(void*)&transformConfig},
-        sizeof(TransformFireConfig)
-    };
-
-    PresetConfig preset = {
-        // layer
-        {{
-            // keyframes
-            {
-                {
-                    // duration
-                    -1,
-                    // bitmap
-                    {.ptr=(void*)&bitmap},
-                    // transforms
-                    { 
-                        {.ptr=(void*)&transform},
-                    }
-                }
-            }
-        }}
-    };
-
-    int presetId = presetWrite(&preset);    
-    if(!presetId){
-        Serial.printf("couldnt write default fire preset\n");
-        return 0;
-    }
-
-    return presetId;
-}
-
-static int writeFlashyPreset(){
-
-    byte bitmapData[] = {
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-        255, 0, 0, 255,
-    };
-
-    BitmapConfig bitmap = {
-        16, 1, {.ptr=(void*)&bitmapData}
-    };
-
-    TransformAlphaConfig tcfg1 = { 1.0, 1.0 };
-    TransformConfig trans1 = {
-        ALPHA_TRANS,
-        {.ptr=(void*)&tcfg1},
-        sizeof(TransformAlphaConfig)
-    };
-    KeyframeConfig key1 = {
-        // duration
-        1,
-        // bitmap
-        {.ptr=(void*)&bitmap},
-        // transforms
-        {{.ptr=(void*)&trans1}},
-    };
-
-    TransformAlphaConfig tcfg2 = { 0.0, 0.0 };
-    TransformConfig trans2 = {
-        ALPHA_TRANS,
-        {.ptr=(void*)&tcfg2},
-        sizeof(TransformAlphaConfig)
-    };
-    KeyframeConfig key2 = {
-        // duration
-        1,
-        // bitmap
-        {0},
-        // transforms
-        {{.ptr=(void*)&trans2}}
-    };
-
-    TransformAlphaConfig tcfg3 = { 1.0, 1.0 };
-    TransformConfig trans3 = {
-        ALPHA_TRANS,
-        {.ptr=(void*)&tcfg3},
-        sizeof(TransformAlphaConfig)
-    };
-    KeyframeConfig key3 = {
-        // duration
-        1,
-        // bitmap
-        {0},
-        // transforms
-        {{.ptr=(void*)&trans3}},
-    };
-
-    TransformAlphaConfig tcfg4 = { 0.0, 0.0 };
-    TransformConfig trans4 = {
-        ALPHA_TRANS,
-        {.ptr=(void*)&tcfg4},
-        sizeof(TransformAlphaConfig)
-    };
-    KeyframeConfig key4 = {
-        // duration
-        1,
-        // bitmap
-        {0},
-        // transforms
-        {{.ptr=(void*)&trans4}}
-    };
-
-    TransformAlphaConfig tcfg5 = { 1.0, 1.0 };
-    TransformConfig trans5 = {
-        ALPHA_TRANS,
-        {.ptr=(void*)&tcfg5},
-        sizeof(TransformAlphaConfig)
-    };
-    KeyframeConfig key5 = {
-        // duration
-        1,
-        // bitmap
-        {0},
-        // transforms
-        {{.ptr=(void*)&trans5}},
-    };
-
-    TransformAlphaConfig tcfg6 = { 0.0, 0.0 };
-    TransformConfig trans6 = {
-        ALPHA_TRANS,
-        {.ptr=(void*)&tcfg6},
-        sizeof(TransformAlphaConfig)
-    };
-    KeyframeConfig key6 = {
-        // duration
-        10,
-        // bitmap
-        {0},
-        // transforms
-        {{.ptr=(void*)&trans6}}
-    };
-
-    PresetConfig preset = {
-        // layer
-        {{
-            // keyframes
-            { key1, key2, key3, key4, key5, key6 }
-        }}
-    };
-
-    int presetId = presetWrite(&preset);    
-    if(!presetId){
-        Serial.printf("couldnt write default flashy preset\n");
-        return 0;
-    }
-
-    return presetId;
-}
-
-static int writeTestyPreset(){
-
-    byte bitmapData[] = {
-        255, 0, 0, 255,
-        0,0,0,0,
-        0,0,0,0,
-        0,0,0,0,
-        255, 255, 0, 255,
-        0,0,0,0,
-        0,0,0,0,
-        0,0,0,0,
-        0, 255, 0, 255,
-        0,0,0,0,
-        0,0,0,0,
-        0,0,0,0,
-        0, 255, 255, 255,
-        0,0,0,0,
-        0,0,0,0,
-        0,0,0,0
-    };
-
-    BitmapConfig bitmap = {
-        16, 1, {.ptr=(void*)&bitmapData}
-    };
-
-    PresetConfig preset = {
-        // layer
-        {{
-            // keyframes
-            {
-                {
-                    // duration
-                    -1,
-                    // bitmap
-                    {.ptr=(void*)&bitmap},
-                    // transforms
-                    {}
-                }
-            }
-        }}
-    };
-
-    int presetId = presetWrite(&preset);    
-    if(!presetId){
-        Serial.printf("couldnt write default testy preset\n");
-        return 0;
-    }
-
-    return presetId;
 }
 
 int defaultPresetsWrite(){
@@ -412,13 +165,132 @@ int defaultPresetsWrite(){
     objStoreWipe("presets");
 
     int spinnyPresetId = writeSpinnyPreset();
-    int firePresetId = writeFirePreset();
-    int flashyPresetId = writeFlashyPreset();
-    int testyPresetId = writeTestyPreset();
 
-    Serial.printf("wrote spinny preset %i, fire preset %i, flashy preset %i\n", 
-            spinnyPresetId, firePresetId, flashyPresetId);
+    Serial.printf("wrote spinny preset %i", spinnyPresetId);
+    return 1;
+}
 
-    // return number of default presets created
-    return 4;
+
+// TODO - put these someplace and share em
+byte RED[] = {255,0,0,255};
+byte GREEN[] = {0,255,0,255};
+byte BLUE[] = {0,0,255,255};
+byte YELLOW[] = {255,255,0,255};
+byte WHITE[] = {255,255,255,255};
+
+// hardcoded presets
+static void addPulseLayer(AnimatorLayer l, int numPx, byte * color){
+    Bitmap * bmp = Bitmap_create(numPx, 1);
+    Bitmap_fill(bmp, color);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 20, bmp);
+    animatorKeyframeAddTransform(k1, createTransformPulse(3, 11, 3, 3));
+}
+void addPulseRedLayer(AnimatorLayer l, int numPx){
+    addPulseLayer(l, numPx, RED);
+}
+void addPulseGreenLayer(AnimatorLayer l, int numPx){
+    addPulseLayer(l, numPx, GREEN);
+}
+void addPulseBlueLayer(AnimatorLayer l, int numPx){
+    addPulseLayer(l, numPx, BLUE);
+}
+void addPulseYellowLayer(AnimatorLayer l, int numPx){
+    addPulseLayer(l, numPx, YELLOW);
+}
+void addPulseWhiteLayer(AnimatorLayer l, int numPx){
+    addPulseLayer(l, numPx, WHITE);
+}
+
+static void addSolidLayer(AnimatorLayer l, int numPx, byte * color){
+    Bitmap * bmp = Bitmap_create(numPx, 1);
+    Bitmap_fill(bmp, color);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 75, bmp);
+}
+void addSolidRedLayer(AnimatorLayer l, int numPx){
+    addSolidLayer(l, numPx, RED);
+}
+void addSolidGreenLayer(AnimatorLayer l, int numPx){
+    addSolidLayer(l, numPx, GREEN);
+}
+void addSolidBlueLayer(AnimatorLayer l, int numPx){
+    addSolidLayer(l, numPx, BLUE);
+}
+void addSolidYellowLayer(AnimatorLayer l, int numPx){
+    addSolidLayer(l, numPx, YELLOW);
+}
+void addSolidWhiteLayer(AnimatorLayer l, int numPx){
+    addSolidLayer(l, numPx, WHITE);
+}
+
+static void addStrobeLayer(AnimatorLayer l, int numPx, byte * color){
+    Bitmap * bmp = Bitmap_create(numPx, 1);
+    Bitmap_fill(bmp, color);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 1, bmp);
+    animatorKeyframeAddTransform(k1, createTransformAlpha(0.0, 0.0));
+    AnimatorKeyframe k2 = animatorKeyframeCreate(l, 1, bmp);
+    animatorKeyframeAddTransform(k2, createTransformAlpha(1.0, 1.0));
+    AnimatorKeyframe k3 = animatorKeyframeCreate(l, 1, bmp);
+    animatorKeyframeAddTransform(k3, createTransformAlpha(0.0, 0.0));
+    AnimatorKeyframe k4 = animatorKeyframeCreate(l, 1, bmp);
+    animatorKeyframeAddTransform(k4, createTransformAlpha(1.0, 1.0));
+    AnimatorKeyframe k5 = animatorKeyframeCreate(l, 1, bmp);
+    animatorKeyframeAddTransform(k5, createTransformAlpha(0.0, 0.0));
+    AnimatorKeyframe k6 = animatorKeyframeCreate(l, 1, bmp);
+    animatorKeyframeAddTransform(k6, createTransformAlpha(1.0, 1.0));
+    AnimatorKeyframe k7 = animatorKeyframeCreate(l, 10, bmp);
+    animatorKeyframeAddTransform(k7, createTransformAlpha(0.0, 0.0));
+}
+void addStrobeRedLayer(AnimatorLayer l, int numPx){
+    addStrobeLayer(l, numPx, RED);
+}
+void addStrobeGreenLayer(AnimatorLayer l, int numPx){
+    addStrobeLayer(l, numPx, GREEN);
+}
+void addStrobeBlueLayer(AnimatorLayer l, int numPx){
+    addStrobeLayer(l, numPx, BLUE);
+}
+void addStrobeYellowLayer(AnimatorLayer l, int numPx){
+    addStrobeLayer(l, numPx, YELLOW);
+}
+void addStrobeWhiteLayer(AnimatorLayer l, int numPx){
+    addStrobeLayer(l, numPx, WHITE);
+}
+
+void addColoryLayer(AnimatorLayer l, int numPx){
+    Bitmap * bmp = Bitmap_create(numPx, 1);
+    Bitmap_fill(bmp, BLUE);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 30, bmp);
+    animatorKeyframeAddTransform(k1, createTransformRGB(RED, GREEN, REPLACE));
+    AnimatorKeyframe k2 = animatorKeyframeCreate(l, 30, bmp);
+    animatorKeyframeAddTransform(k2, createTransformRGB(GREEN, BLUE, REPLACE));
+    AnimatorKeyframe k3 = animatorKeyframeCreate(l, 30, bmp);
+    animatorKeyframeAddTransform(k3, createTransformRGB(BLUE, RED, REPLACE));
+}
+
+void addPulsyColoryLayer(AnimatorLayer l, int numPx){
+    Bitmap * bmp = Bitmap_create(numPx, 1);
+    Bitmap_fill(bmp, BLUE);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 16, bmp);
+    animatorKeyframeAddTransform(k1, createTransformRGB(RED, GREEN, REPLACE));
+    animatorKeyframeAddTransform(k1, createTransformPulse(5,1,5,5));
+    AnimatorKeyframe k2 = animatorKeyframeCreate(l, 16, bmp);
+    animatorKeyframeAddTransform(k2, createTransformRGB(GREEN, BLUE, REPLACE));
+    animatorKeyframeAddTransform(k2, createTransformPulse(5,1,5,5));
+    AnimatorKeyframe k3 = animatorKeyframeCreate(l, 16, bmp);
+    animatorKeyframeAddTransform(k3, createTransformRGB(BLUE, RED, REPLACE));
+    animatorKeyframeAddTransform(k3, createTransformPulse(5,1,5,5));
+}
+
+void addFlameLayer(AnimatorLayer l, int numPx){
+    Bitmap * bmp = Bitmap_create(numPx, 1);
+    byte orange[] = {255, 100, 0, 255};
+    Bitmap_fill(bmp, orange);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 255, bmp);
+    animatorKeyframeAddTransform(k1, createTransformFire(2, 4));
 }
