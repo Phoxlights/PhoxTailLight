@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ease.h>
 #include "presets.h"
 #include "objstore.h"
 #include "defaultPresets.h"
