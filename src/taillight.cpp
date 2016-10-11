@@ -8,10 +8,17 @@
 #include "defaultPresets.h"
 #include "transform.h"
 
+/*******************************************
+ * this is some dense, yucko code. be warned.
+ *******************************************/
+
 static void addSignalRight(TailLight tail);
 static void addSignalLeft(TailLight tail);
 static void addBrake(TailLight tail);
 static void addOTA(TailLight tail);
+
+// TODO - infer this from the presets array
+static int presetCount = 19;
 
 typedef struct TailLightState {
     int pin;
@@ -73,13 +80,8 @@ TailLight tailLightCreate(int pin, int numPx, float brightness, int offset){
     state->currentPreset = -1;
 
     // TODO - only do this if defaults arent preset
-    int presetCount = defaultPresetsWrite();
-
-    // if we cant write the default presets,
-    // theres nothing we can load, which is fatal
-    if(!presetCount){
-        Serial.println("couldnt write default presets");
-        return NULL;
+    if(!defaultPresetsWrite()){
+        Serial.println("couldnt write default presets, continuing");
     }
 
     // needed for cycling the presets array
@@ -341,7 +343,7 @@ static void loadStoredPreset(TailLight tail, PresetConfig * preset){
     }
 }
 
-// default presets
+// dynamic layers
 static void addSpinnyLayer(TailLight tail){
     // TODO - someone know that spinny preset is 1
     PresetConfig * preset = presetLoad(1);
@@ -352,35 +354,7 @@ static void addSpinnyLayer(TailLight tail){
     loadStoredPreset(tail, preset);
 }
 
-static void addFlameLayer(TailLight tail){
-    // TODO - someone know that fire preset is 2
-    PresetConfig * preset = presetLoad(2);
-    if(!preset){
-        Serial.printf("error loading fire preset from fs\n");
-    }
-
-    loadStoredPreset(tail, preset);
-}
-
-static void addFlashyLayer(TailLight tail){
-    // TODO - someone know that flashy preset is 3
-    PresetConfig * preset = presetLoad(3);
-    if(!preset){
-        Serial.printf("error loading flashy preset from fs\n");
-    }
-
-    loadStoredPreset(tail, preset);
-}
-
-static void addTestyLayer(TailLight tail){
-    PresetConfig * preset = presetLoad(4);
-    if(!preset){
-        Serial.printf("error loading testy preset from fs\n");
-    }
-
-    loadStoredPreset(tail, preset);
-}
-
+// hardcoded brake and signals
 static void addBrake(TailLight tail){
     AnimatorLayer layer = tailLightCreateBrakeLayer(tail);
 
@@ -546,13 +520,105 @@ static void addOTA(TailLight tail){
     animatorLayerStop(layer);
 }
 
+// hardcoded running presets
+static void addPulseRedLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addPulseRedLayer(l, tail->numPx);
+}
+static void addPulseGreenLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addPulseGreenLayer(l, tail->numPx);
+}
+static void addPulseBlueLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addPulseBlueLayer(l, tail->numPx);
+}
+static void addPulseYellowLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addPulseYellowLayer(l, tail->numPx);
+}
+static void addPulseWhiteLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addPulseWhiteLayer(l, tail->numPx);
+}
+static void addSolidRedLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addSolidRedLayer(l, tail->numPx);
+}
+static void addSolidGreenLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addSolidGreenLayer(l, tail->numPx);
+}
+static void addSolidBlueLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addSolidBlueLayer(l, tail->numPx);
+}
+static void addSolidYellowLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addSolidYellowLayer(l, tail->numPx);
+}
+static void addSolidWhiteLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addSolidWhiteLayer(l, tail->numPx);
+}
+static void addStrobeRedLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addStrobeRedLayer(l, tail->numPx);
+}
+static void addStrobeGreenLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addStrobeGreenLayer(l, tail->numPx);
+}
+static void addStrobeBlueLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addStrobeBlueLayer(l, tail->numPx);
+}
+static void addStrobeYellowLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addStrobeYellowLayer(l, tail->numPx);
+}
+static void addStrobeWhiteLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addStrobeWhiteLayer(l, tail->numPx);
+}
+static void addColoryLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addColoryLayer(l, tail->numPx);
+}
+static void addPulsyColoryLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addPulsyColoryLayer(l, tail->numPx);
+}
+static void addFlameLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addFlameLayer(l, tail->numPx);
+}
+
 // TODO - this list of presets should probably be
 // part of the TailLight struct
 static void(*presets[])(TailLight tail) = {
+    // dynamic presets
     addSpinnyLayer,
+
+    // hardcoded presets
+    addColoryLayer,
+    addPulsyColoryLayer,
     addFlameLayer,
-    addFlashyLayer,
-    addTestyLayer
+    addStrobeRedLayer,
+    addPulseRedLayer,
+    addSolidRedLayer,
+    addStrobeGreenLayer,
+    addPulseGreenLayer,
+    addSolidGreenLayer,
+    addStrobeBlueLayer,
+    addPulseBlueLayer,
+    addSolidBlueLayer,
+    addStrobeYellowLayer,
+    addPulseYellowLayer,
+    addSolidYellowLayer,
+    addStrobeWhiteLayer,
+    addPulseWhiteLayer,
+    addSolidWhiteLayer,
 };
 
 int tailLightNextPreset(TailLight state){
