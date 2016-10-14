@@ -6,7 +6,7 @@ ESP_LIBS=$(HOME)/src/ArduinoEsp/libraries
 
 # makeEspArduino overrides
 BUILD_DIR = $(ROOT)/tmp
-FLASH_DEF=1M512
+FLASH_DEF=4M1M
 ESP_ROOT=$(HOME)/src/ArduinoEsp
 SKETCH=$(ROOT)/src/PhoxTailLight.ino
 LIBS = $(ROOT)/libs \
