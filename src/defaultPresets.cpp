@@ -173,10 +173,13 @@ int defaultPresetsWrite(){
 
 // TODO - put these someplace and share em
 byte RED[] = {255,0,0,255};
+byte ORANGE[] = {255,255,0,255};
 byte GREEN[] = {0,255,0,255};
 byte BLUE[] = {0,0,255,255};
 byte YELLOW[] = {255,255,0,255};
+byte PURPLE[] = {255,0,255,255};
 byte WHITE[] = {255,255,255,255};
+byte BLACK[] = {0,0,0,255};
 
 // hardcoded presets
 static void addPulseLayer(AnimatorLayer l, int numPx, byte * color){
@@ -294,3 +297,100 @@ void addFlameLayer(AnimatorLayer l, int numPx){
     AnimatorKeyframe k1 = animatorKeyframeCreate(l, 255, bmp);
     animatorKeyframeAddTransform(k1, createTransformFire(2, 4));
 }
+
+void addWhiteAcross(AnimatorLayer l, int numPx){
+    Bitmap * bmp1 = Bitmap_create(numPx, 1);
+    GradientStop * stops[MAX_STOPS] = {
+        (GradientStop*)&BLACK,
+        (GradientStop*)&WHITE,
+        (GradientStop*)&BLACK,
+    };
+    Bitmap_gradient(bmp1, stops, 3);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 50, bmp1);
+    animatorKeyframeAddTransform(k1, createTransformTranslateX(0, 47, true, EASE_IN_OUT));
+    animatorKeyframeAddTransform(k1, createTransformMirrorX(true));
+    // rotate 45deg
+    animatorKeyframeAddTransform(k1, createTransformTranslateX(12, 12, true, LINEAR));
+}
+
+void addRedBlueAcross(AnimatorLayer l, int numPx){
+    Bitmap * bmp1 = Bitmap_create(numPx, 1);
+    GradientStop * stops[MAX_STOPS] = {
+        (GradientStop*)&RED,
+        (GradientStop*)&BLUE,
+        (GradientStop*)&RED,
+    };
+    Bitmap_gradient(bmp1, stops, 3);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 50, bmp1);
+    animatorKeyframeAddTransform(k1, createTransformTranslateX(0, 15, true, LINEAR));
+    animatorKeyframeAddTransform(k1, createTransformMirrorX(true));
+    // rotate 45deg
+    animatorKeyframeAddTransform(k1, createTransformTranslateX(12, 12, true, LINEAR));
+}
+
+void addSpinnyLayer(AnimatorLayer l, int numPx){
+    byte almost[] = {0,0,0,100};
+    Bitmap * bmp1 = Bitmap_create(numPx, 1);
+    GradientStop * stops[MAX_STOPS] = {
+        (GradientStop*)&almost,
+        (GradientStop*)&BLACK,
+        (GradientStop*)&almost,
+        (GradientStop*)&BLACK,
+        (GradientStop*)&almost,
+    };
+    Bitmap_gradient(bmp1, stops, 5);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 30, bmp1);
+    animatorKeyframeAddTransform(k1, createTransformRGB(RED, GREEN, REPLACE));
+    animatorKeyframeAddTransform(k1, createTransformTranslateX(0, 15, true, LINEAR));
+
+    AnimatorKeyframe k2 = animatorKeyframeCreate(l, 30, bmp1);
+    animatorKeyframeAddTransform(k2, createTransformRGB(GREEN, BLUE, REPLACE));
+    animatorKeyframeAddTransform(k2, createTransformTranslateX(0, 15, true, LINEAR));
+
+    AnimatorKeyframe k3 = animatorKeyframeCreate(l, 30, bmp1);
+    animatorKeyframeAddTransform(k3, createTransformRGB(BLUE, RED, REPLACE));
+    animatorKeyframeAddTransform(k3, createTransformTranslateX(0, 15, true, LINEAR));
+}
+
+void addSpinny2(AnimatorLayer l, int numPx){
+    byte almost[] = {0,0,0,100};
+    Bitmap * bmp1 = Bitmap_create(numPx, 1);
+    GradientStop * stops[MAX_STOPS] = {
+        (GradientStop*)&almost,
+        (GradientStop*)&BLACK,
+        (GradientStop*)&almost,
+        (GradientStop*)&BLACK,
+        (GradientStop*)&almost,
+    };
+    Bitmap_gradient(bmp1, stops, 5);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 35, bmp1);
+    animatorKeyframeAddTransform(k1, createTransformRGB(RED, GREEN, REPLACE));
+    animatorKeyframeAddTransform(k1, createTransformTranslateX(0, 31, true, EASE_IN_OUT));
+
+    AnimatorKeyframe k2 = animatorKeyframeCreate(l, 35, bmp1);
+    animatorKeyframeAddTransform(k2, createTransformRGB(GREEN, BLUE, REPLACE));
+    animatorKeyframeAddTransform(k2, createTransformTranslateX(0, 31, true, EASE_IN_OUT));
+
+    AnimatorKeyframe k3 = animatorKeyframeCreate(l, 35, bmp1);
+    animatorKeyframeAddTransform(k3, createTransformRGB(BLUE, RED, REPLACE));
+    animatorKeyframeAddTransform(k3, createTransformTranslateX(0, 31, true, EASE_IN_OUT));
+}
+
+void addTightRedPulse(AnimatorLayer l, int numPx){
+    Bitmap * bmp1 = Bitmap_create(numPx, 1);
+    GradientStop * stops[MAX_STOPS] = {
+        (GradientStop*)&RED,
+        (GradientStop*)&BLACK,
+        (GradientStop*)&RED,
+    };
+    Bitmap_gradient(bmp1, stops, 3);
+
+    AnimatorKeyframe k1 = animatorKeyframeCreate(l, 30, bmp1);
+    animatorKeyframeAddTransform(k1, createTransformTranslateX(0, 15, true, LINEAR));
+    animatorKeyframeAddTransform(k1, createTransformMirrorX(false));
+}
+
