@@ -18,7 +18,7 @@ static void addBrake(TailLight tail);
 static void addOTA(TailLight tail);
 
 // TODO - infer this from the presets array
-static int presetCount = 19;
+static int presetCount = 23;
 
 typedef struct TailLightState {
     int pin;
@@ -64,7 +64,7 @@ TailLight tailLightCreate(int pin, int numPx, float brightness, int offset){
     state->loopNode = NULL;
     state->brightness = brightness;
     state->offset = offset;
-    state->offsetTransform = createTransformTranslateX(offset, offset, true);
+    state->offsetTransform = createTransformTranslateX(offset, offset, true, LINEAR);
     state->running = NULL;
     state->signalRight = NULL;
     state->signalLeft = NULL;
@@ -79,13 +79,15 @@ TailLight tailLightCreate(int pin, int numPx, float brightness, int offset){
     // setup presets
     state->currentPreset = -1;
 
-    // TODO - only do this if defaults arent preset
+    // needed for cycling the presets array
+    state->presetCount = presetCount;
+
+    /*
+    // TODO - reenable this once presets are being edited
     if(!defaultPresetsWrite()){
         Serial.println("couldnt write default presets, continuing");
     }
-
-    // needed for cycling the presets array
-    state->presetCount = presetCount;
+    */
 
     tailLightNextPreset(state);
     addSignalRight(state);
@@ -156,7 +158,7 @@ int tailLightSetOffset(TailLight state, int offset){
     if(state->offsetTransform != NULL){
         freeTransform(state->offsetTransform);
     }
-    state->offsetTransform = createTransformTranslateX(offset, offset, true);
+    state->offsetTransform = createTransformTranslateX(offset, offset, true, LINEAR);
     return 1;
 }
 
@@ -307,7 +309,7 @@ static void loadStoredPreset(TailLight tail, PresetConfig * preset){
                         {
                         TransformTranslateXConfig * transformArgs = (TransformTranslateXConfig*)transformConfig->transformArgs.ptr;
                         animatorKeyframeAddTransform(k, 
-                            createTransformTranslateX(transformArgs->start, transformArgs->end, transformArgs->wrap));
+                            createTransformTranslateX(transformArgs->start, transformArgs->end, transformArgs->wrap, LINEAR));
                         }
                         break;
 
@@ -344,6 +346,8 @@ static void loadStoredPreset(TailLight tail, PresetConfig * preset){
 }
 
 // dynamic layers
+// TODO - reenable these when presets are editable
+/*
 static void addSpinnyLayer(TailLight tail){
     // TODO - someone know that spinny preset is 1
     PresetConfig * preset = presetLoad(1);
@@ -353,6 +357,7 @@ static void addSpinnyLayer(TailLight tail){
 
     loadStoredPreset(tail, preset);
 }
+*/
 
 // hardcoded brake and signals
 static void addBrake(TailLight tail){
@@ -394,40 +399,40 @@ static void addSignalRight(TailLight tail){
     // slide
     AnimatorKeyframe k;
     k = animatorKeyframeCreate(layer, 10, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(0, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
+    animatorKeyframeAddTransform(k, createTransformTranslateX(0, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
 
     // hold
     k = animatorKeyframeCreate(layer, 2, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
 
     // off
     k = animatorKeyframeCreate(layer, 5, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
     animatorKeyframeAddTransform(k, createTransformAlpha(0.0, 0.0));
 
     // on
     k = animatorKeyframeCreate(layer, 5, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
 
     // off
     k = animatorKeyframeCreate(layer, 5, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
     animatorKeyframeAddTransform(k, createTransformAlpha(0.0, 0.0));
 
     // on
     k = animatorKeyframeCreate(layer, 5, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
 
     // fade
     k = animatorKeyframeCreate(layer, 5, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
     animatorKeyframeAddTransform(k, createTransformAlpha(1.0, 0.0));
 
     // dont play till needed
@@ -461,46 +466,46 @@ static void addSignalLeft(TailLight tail){
     // slide
     AnimatorKeyframe k;
     k = animatorKeyframeCreate(layer, 10, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(0, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
-    animatorKeyframeAddTransform(k, createTransformTranslateX(8, 8, true));
+    animatorKeyframeAddTransform(k, createTransformTranslateX(0, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
+    animatorKeyframeAddTransform(k, createTransformTranslateX(8, 8, true, LINEAR));
 
     // hold
     k = animatorKeyframeCreate(layer, 2, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
-    animatorKeyframeAddTransform(k, createTransformTranslateX(8, 8, true));
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
+    animatorKeyframeAddTransform(k, createTransformTranslateX(8, 8, true, LINEAR));
 
     // off
     k = animatorKeyframeCreate(layer, 5, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
     animatorKeyframeAddTransform(k, createTransformAlpha(0.0, 0.0));
 
     // on
     k = animatorKeyframeCreate(layer, 5, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
-    animatorKeyframeAddTransform(k, createTransformTranslateX(8, 8, true));
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
+    animatorKeyframeAddTransform(k, createTransformTranslateX(8, 8, true, LINEAR));
 
     // off
     k = animatorKeyframeCreate(layer, 5, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
     animatorKeyframeAddTransform(k, createTransformAlpha(0.0, 0.0));
 
     // on
     k = animatorKeyframeCreate(layer, 5, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
-    animatorKeyframeAddTransform(k, createTransformTranslateX(8, 8, true));
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
+    animatorKeyframeAddTransform(k, createTransformTranslateX(8, 8, true, LINEAR));
 
     // fade
     k = animatorKeyframeCreate(layer, 5, bmp1);
-    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true));
-    animatorKeyframeAddTransform(k, createTransformMirrorX());
+    animatorKeyframeAddTransform(k, createTransformTranslateX(10, 10, true, LINEAR));
+    animatorKeyframeAddTransform(k, createTransformMirrorX(true));
     animatorKeyframeAddTransform(k, createTransformAlpha(1.0, 0.0));
-    animatorKeyframeAddTransform(k, createTransformTranslateX(8, 8, true));
+    animatorKeyframeAddTransform(k, createTransformTranslateX(8, 8, true, LINEAR));
 
     // dont play till needed
     animatorLayerStop(layer);
@@ -593,17 +598,51 @@ static void addFlameLayer(TailLight tail){
     AnimatorLayer l = tailLightCreateRunningLayer(tail);
     addFlameLayer(l, tail->numPx);
 }
+static void addSpinnyLayer(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addSpinnyLayer(l, tail->numPx);
+}
+static void addSpinny2(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addSpinny2(l, tail->numPx);
+}
+static void addTightRedPulse(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addTightRedPulse(l, tail->numPx);
+}
+static void addWhiteAcross(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addWhiteAcross(l, tail->numPx);
+}
+static void addRedBlueAcross(TailLight tail){
+    AnimatorLayer l = tailLightCreateRunningLayer(tail);
+    addRedBlueAcross(l, tail->numPx);
+}
 
 // TODO - this list of presets should probably be
 // part of the TailLight struct
 static void(*presets[])(TailLight tail) = {
+    // TODO - turn this back on when presets
+    // are editable
     // dynamic presets
-    addSpinnyLayer,
+    //addSpinnyLayer,
 
     // hardcoded presets
+    // spinny
+    addSpinnyLayer,
+    addSpinny2,
+    addTightRedPulse,
+
+    // across
+    addWhiteAcross,
+    addRedBlueAcross,
+
+    // misc
     addColoryLayer,
     addPulsyColoryLayer,
     addFlameLayer,
+
+    // solid, pulse, strobe
     addStrobeRedLayer,
     addPulseRedLayer,
     addSolidRedLayer,
