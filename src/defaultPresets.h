@@ -37,6 +37,20 @@ typedef struct TransformAlphaConfig {
 // dynamic presets (load/save to fs)
 int defaultPresetsWrite();
 
+// spinny
+void addSpinnyLayer(AnimatorLayer l, int numPx);
+void addSpinny2(AnimatorLayer l, int numPx);
+void addTightRedPulse(AnimatorLayer l, int numPx);
+
+// across
+void addWhiteAcross(AnimatorLayer l, int numPx);
+void addRedBlueAcross(AnimatorLayer l, int numPx);
+
+// misc
+void addColoryLayer(AnimatorLayer l, int numPx);
+void addPulsyColoryLayer(AnimatorLayer l, int numPx);
+void addFlameLayer(AnimatorLayer l, int numPx);
+
 // static presets
 void addPulseRedLayer(AnimatorLayer l, int numPx);
 void addPulseGreenLayer(AnimatorLayer l, int numPx);
@@ -53,8 +67,5 @@ void addStrobeGreenLayer(AnimatorLayer l, int numPx);
 void addStrobeBlueLayer(AnimatorLayer l, int numPx);
 void addStrobeYellowLayer(AnimatorLayer l, int numPx);
 void addStrobeWhiteLayer(AnimatorLayer l, int numPx);
-void addColoryLayer(AnimatorLayer l, int numPx);
-void addPulsyColoryLayer(AnimatorLayer l, int numPx);
-void addFlameLayer(AnimatorLayer l, int numPx);
 
 #endif

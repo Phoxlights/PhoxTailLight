@@ -468,7 +468,7 @@ void setup(){
     statusLightStop(status);
 
     // switch presets
-    DigitalButton btn = buttonCreate(BUTTON_PIN, 200);
+    DigitalButton btn = buttonCreate(BUTTON_PIN, 50);
     buttonOnTap(btn, nextPreset);
     // OTA mode
     buttonOnUp(btn, neverOTAEver);
