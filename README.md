@@ -27,6 +27,7 @@ Releasing
 Use the [git flow](http://nvie.com/posts/a-successful-git-branching-model/) release process. 
 
 Release checklist:
+* Bump to BIN_VERSION in whatever sketch (TODO - automatically pull this from VERSION)
 * Build a new bin and put it in `build`. This can be done with `make build`.
 * Update `CHANGELOG`
 * Make sure submodules are pinned to a release tag

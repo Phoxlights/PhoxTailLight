@@ -25,6 +25,8 @@
 #define EVENT_PORT 6767
 #define BUTTON_PIN 14
 #define STATUS_PIN 2
+// TODO - get BIN_VERSION from VERSION file
+#define BIN_VERSION 12
 
 void asplode(char * err){
     Serial.printf("ERROR: %s\n", err);
@@ -43,7 +45,7 @@ typedef struct Identity {
 Identity id = {
     .model = 1000,
     .serial = ESP.getChipId(),
-    .bin = 7,
+    .bin = BIN_VERSION,
     .eventVer = EVENT_VER,
     .dbVer = DB_VER
 };
