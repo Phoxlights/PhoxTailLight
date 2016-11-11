@@ -1,6 +1,9 @@
 THIS_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 ROOT := $(THIS_DIR)
 
+# OTA IP
+ESP_ADDR ?= 192.168.43.20
+
 ESP_MAKE=$(HOME)/src/makeEspArduino
 ESP_LIBS=$(HOME)/src/ArduinoEsp/libraries
 

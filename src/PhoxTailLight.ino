@@ -13,20 +13,7 @@
 #include <objstore.h>
 #include <event.h>
 #include <taillight.h>
-
-#define OTA_SSID "phoxlight"
-#define OTA_PASS "phoxlight"
-#define OTA_HOSTNAME "phoxlightota"
-
-#define DB_VER 2
-#define EVENT_VER 2
-#define NUM_PX 16
-#define TAIL_PIN 2
-#define EVENT_PORT 6767
-#define BUTTON_PIN 14
-#define STATUS_PIN 2
-// TODO - get BIN_VERSION from VERSION file
-#define BIN_VERSION 12
+#include <taillightconfig.h>
 
 void asplode(char * err){
     Serial.printf("ERROR: %s\n", err);
@@ -34,97 +21,10 @@ void asplode(char * err){
     ESP.restart();
 }
 
-typedef struct Identity {
-    uint32_t model;
-    uint32_t serial;
-    uint16_t bin;
-    uint16_t eventVer;
-    uint16_t dbVer;
-} Identity;
-
-Identity id = {
-    .model = 1000,
-    .serial = ESP.getChipId(),
-    .bin = BIN_VERSION,
-    .eventVer = EVENT_VER,
-    .dbVer = DB_VER
-};
-
-typedef struct TailLightConfig {
-    char ssid[SSID_MAX];
-    char pass[PASS_MAX];
-    char hostname[HOSTNAME_MAX];
-    int currentPreset;
-    int offset;
-    NetworkMode networkMode;
-} TailLightConfig;
-
-// default config values
-TailLightConfig defaultConfig = {
-    "phoxlight",
-    "phoxlight",
-    "phoxlight",
-    0,
-    0,
-    CONNECT,
-};
-
-int configId = 1;
-TailLightConfig config;
 TailLight tailLight;
-
 StatusLight status;
-
-int writeDefaultConfig(){
-    // delete existing taillight config
-    Serial.println("wiping taillight config");
-    objStoreWipe("taillight");
-
-    int id = objStoreCreate("taillight", &defaultConfig, sizeof(TailLightConfig));
-    if(!id){
-        Serial.println("failed to write default config");
-        return 0;
-    }
-    Serial.printf("wrote default taillight config, with id %i\n", id);
-    return 1;
-}
-
-int writeCurrentConfig(){
-    if(!objStoreUpdate("taillight", configId, &config, sizeof(TailLightConfig))){
-        Serial.println("failed to write config");
-        return 0;
-    }
-    return 1;
-}
-
-int loadConfig(){
-    // load from fs
-    objStoreInit(DB_VER);
-    if(!objStoreGet("taillight", configId, &config, sizeof(TailLightConfig))){
-        // store defaults
-        Serial.println("taillight config not found, storing defaults");
-        if(!writeDefaultConfig()){
-            asplode("couldnt store default taillight config. prepare your butt.");
-        }
-        // reload config now that we have defaults
-        loadConfig();
-    }
-    return 1;
-}
-
-void logConfig(){
-    Serial.printf("\
-config: {\n\
-    ssid: %s,\n\
-    hostname: %s,\n\
-    currentPreset: %i,\n\
-    offset: %i,\n\
-    networkMode: %s,\n\
-}\n", 
-    config.ssid, config.hostname,
-    config.currentPreset, config.offset,
-    config.networkMode == 0 ? "CONNECT" : config.networkMode == 1 ? "CREATE" : "OFF");
-}
+TailLightConfig * config = getConfig();
+Identity * id = getIdentity();
 
 void otaStarted(){
     Serial.println("ota start");
@@ -160,8 +60,8 @@ void otaEnd(){
 void nextPreset(){
     tailLightNextPreset(tailLight);
     int presetIndex = tailLightGetPresetIndex(tailLight);
-    config.currentPreset = presetIndex;
-    writeCurrentConfig();
+    config->currentPreset = presetIndex;
+    writeConfig(config);
 }
 
 int setupStartHeap, setupEndHeap, prevHeap;
@@ -214,7 +114,6 @@ void stopTurnSignalLeft(Event * e, Request * r){
     }
 }
 void startBrakeLayer(Event * e, Request * r){
-    Serial.println("asdf");
     brakeOn = true;
     tailLightLayerStart(tailLight, BRAKE);
     tailLightLayerStop(tailLight, RUNNING);
@@ -232,18 +131,18 @@ void setNextPreset(Event * e, Request * r){
 }
 
 void setTaillightOffset(Event * e, Request * r){
-    int newOffset = (config.offset+1) % NUM_PX;
+    int newOffset = (config->offset+1) % NUM_PX;
     Serial.printf("setting taillight offset to %i\n", newOffset); 
     tailLightSetOffset(tailLight, newOffset);
-    config.offset = newOffset;
-    writeCurrentConfig();
+    config->offset = newOffset;
+    writeConfig(config);
 }
 
 void setNetworkMode(Event * e, Request * r){
     int mode = (e->body[1] << 8) + e->body[0];
     Serial.printf("setting network mode to %i\n", mode); 
-    config.networkMode = (NetworkMode)mode;
-    writeCurrentConfig();
+    config->networkMode = (NetworkMode)mode;
+    writeConfig(config);
     delay(100);
     flash();
 }
@@ -276,6 +175,29 @@ void who(Event * e, Request * r){
         Serial.printf("ruhroh");
         return;
     }
+}
+
+void requestRegisterComponent(Event * e, Request * r){
+    Serial.printf("someone wants me to register a thing\n");
+    // TODO - i suspect some sort of sanitization
+    // and bounds checking should occur here
+    Identity * component = (Identity*)e->body;
+    if(!registerComponent(component)){
+        Serial.printf("failed to register component\n");
+        return;
+    }
+
+    // persist new config to disk
+    if(!writeConfig(config)){
+        Serial.printf("failed to write config to disk\n");
+    }
+
+    // TODO - send private wifi creds
+    if(!eventSendC(r->client, EVENT_VER, 0, 0, NULL, NULL)){
+        Serial.printf("ruhroh\n");
+        return;
+    }
+    flash();
 }
 
 void pauseTailLight(Event * e, Request * r){
@@ -381,7 +303,7 @@ void setup(){
 
     // load config from fs
     loadConfig();
-    logConfig();
+    logConfig(config);
 
     // status light
     byte blue[3] = {0,0,40};
@@ -390,18 +312,18 @@ void setup(){
     }
 
     // start network
-    switch(config.networkMode){
+    switch(config->networkMode){
         case CONNECT:
-            if(!networkConnect(config.ssid, config.pass)){
+            if(!networkConnect(config->ssid, config->pass)){
                 Serial.println("couldnt bring up network");
             }
-            networkAdvertise(config.hostname);
+            networkAdvertise(config->hostname);
             break;
         case CREATE:
-            if(!networkCreate(config.ssid, config.pass, IPAddress(192,168,4,1))){
+            if(!networkCreate(config->ssid, config->pass, IPAddress(192,168,4,1))){
                 Serial.println("couldnt create up network");
             }
-            networkAdvertise(config.hostname);
+            networkAdvertise(config->hostname);
             break;
         case OFF:
             Serial.println("turning network off");
@@ -411,10 +333,10 @@ void setup(){
             break;
         default:
             Serial.println("couldnt load network mode, defaulting to CONNECT");
-            if(!networkConnect(config.ssid, config.pass)){
+            if(!networkConnect(config->ssid, config->pass)){
                 Serial.println("couldnt bring up network");
             }
-            networkAdvertise(config.hostname);
+            networkAdvertise(config->hostname);
             break;
     }
 
@@ -444,6 +366,7 @@ void setup(){
         eventRegister(SET_TAILLIGHT_OFFSET, setTaillightOffset);
         eventRegister(SET_DEFAULT_CONFIG, restoreDefaultConfig);
         eventRegister(SET_NETWORK_MODE, setNetworkMode);
+        eventRegister(REGISTER_COMPONENT, requestRegisterComponent);
 
         eventRegister(PAUSE_TAILLIGHT, pauseTailLight);
         eventRegister(RESUME_TAILLIGHT, resumeTailLight);
@@ -456,7 +379,7 @@ void setup(){
     }
 
     // start up taillight
-    tailLight = tailLightCreate(TAIL_PIN, NUM_PX, 1.0, config.offset);
+    tailLight = tailLightCreate(TAIL_PIN, NUM_PX, 1.0, config->offset);
     if(tailLight == NULL){
         asplode("couldnt create taillight");
     }
@@ -465,7 +388,7 @@ void setup(){
     }
 
     // load last selected preset
-    tailLightLoadPreset(tailLight, config.currentPreset);
+    tailLightLoadPreset(tailLight, config->currentPreset);
 
     statusLightStop(status);
 
