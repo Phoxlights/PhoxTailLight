@@ -21,7 +21,7 @@ build: all
 	mkdir -p $(ROOT)/build && \
 	cp $(MAIN_EXE) $(ROOT)/build
 
-DEVICE = 0
+DEVICE ?= 0
 
 send_message:
 	cat $(MESSAGE) | netcat $(MESSAGE_RECIPIENT_IP) $(MESSAGE_SERVER_PORT) 

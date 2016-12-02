@@ -4,10 +4,6 @@
 #include <network.h>
 #include <identity.h>
 
-#define OTA_SSID "phoxlight"
-#define OTA_PASS "phoxlight"
-#define OTA_HOSTNAME "phoxlightota"
-
 #define DB_VER 3
 #define EVENT_VER 2
 #define NUM_PX 16
@@ -22,10 +18,16 @@
 // for a controller
 #define MAX_COMPONENTS 10
 
+// 192.168.4.1
+#define SERVER_IP_UINT32 3232236545
+
+#define HOSTNAME "phoxtail"
+#define OTA_HOSTNAME "phoxlightota"
+
 #define PUBLIC_SSID "phoxlight"
 #define PUBLIC_PASS "phoxlight"
 
-// TODO - generate these
+// TODO - generate these (compile-time? first run?)
 #define PRIVATE_SSID "phoxlightpriv"
 #define PRIVATE_PASS "phoxlightpriv"
 
@@ -39,8 +41,14 @@ typedef struct TailLightConfig {
     Identity components[MAX_COMPONENTS];
 } TailLightConfig;
 
+typedef struct PrivateNetworkCreds {
+    char ssid[SSID_MAX];
+    char pass[PASS_MAX];
+} PrivateNetworkCreds;
+
 TailLightConfig * getConfig();
 Identity * getIdentity();
+PrivateNetworkCreds getPrivateCreds();
 
 int loadConfig();
 int writeConfig(TailLightConfig * c);

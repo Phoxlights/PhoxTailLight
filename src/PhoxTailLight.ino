@@ -192,9 +192,10 @@ void requestRegisterComponent(Event * e, Request * r){
         Serial.printf("failed to write config to disk\n");
     }
 
-    // TODO - send private wifi creds
-    if(!eventSendC(r->client, EVENT_VER, 0, 0, NULL, NULL)){
-        Serial.printf("ruhroh\n");
+    PrivateNetworkCreds creds = getPrivateCreds();
+    Serial.printf("ssid: %s, pass: %s\n", creds.ssid, creds.pass);
+    if(!eventSendC(r->client, EVENT_VER, REGISTER_CONFIRM, sizeof(PrivateNetworkCreds), (void*)&creds, NULL)){
+        Serial.printf("failed to respond to registration request\n");
         return;
     }
     flash();
@@ -232,8 +233,8 @@ void neverOTAEver(){
     // so don't allow OTA mode to happen
     canOTA = false;
 }
-void enterOTAMode(){
-    Serial.println("entering OTA mode");
+void enterSyncMode(){
+    Serial.println("entering sync mode");
 
     // stop taillight
     tailLightStop(tailLight);
@@ -253,9 +254,9 @@ void enterOTAMode(){
     }
 
     Serial.printf("OTA attempting to connect to ssid: %s, pass: %s\n",
-        OTA_SSID, OTA_PASS);
+        PUBLIC_SSID, PUBLIC_PASS);
 
-    if(!networkConnect(OTA_SSID, OTA_PASS)){
+    if(!networkConnect(PUBLIC_SSID, PUBLIC_PASS)){
         Serial.println("couldnt connect to ota network");
         statusLightSetPattern(status, red, pattern);
         return;
@@ -320,7 +321,7 @@ void setup(){
             networkAdvertise(config->hostname);
             break;
         case CREATE:
-            if(!networkCreate(config->ssid, config->pass, IPAddress(192,168,4,1))){
+            if(!networkCreate(config->ssid, config->pass, IPAddress(SERVER_IP_UINT32))){
                 Serial.println("couldnt create up network");
             }
             networkAdvertise(config->hostname);
@@ -373,6 +374,13 @@ void setup(){
         eventRegister(SET_PIXEL, setPixel);
     }
 
+    // TODO HACK REMOVE
+    otaOnStart(&otaStarted);
+    otaOnProgress(&otaProgress);
+    otaOnError(&otaError);
+    otaOnEnd(&otaEnd);
+    otaStart();
+
     byte orange[3] = {20,20,0};
     if(!statusLightSetPattern(status, orange, pattern)){
         Serial.println("couldnt setup status light");
@@ -397,7 +405,7 @@ void setup(){
     buttonOnTap(btn, nextPreset);
     // OTA mode
     buttonOnUp(btn, neverOTAEver);
-    buttonOnHold(btn, enterOTAMode, 4000);
+    buttonOnHold(btn, enterSyncMode, 4000);
 
     // debug log heap usage so i can keep an eye out for leaks
     setupEndHeap = ESP.getFreeHeap();

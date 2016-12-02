@@ -1,3 +1,4 @@
+#include <string.h>
 #include <Esp.h>
 #include <objstore.h>
 #include <identity.h>
@@ -9,7 +10,7 @@
 TailLightConfig defaultConfig = {
     PRIVATE_SSID,
     PRIVATE_PASS,
-    "phoxlight",
+    HOSTNAME,
     0,
     0,
     CONNECT,
@@ -33,6 +34,13 @@ TailLightConfig * getConfig(){
 
 Identity * getIdentity(){
     return &id;
+}
+
+PrivateNetworkCreds getPrivateCreds(){
+    PrivateNetworkCreds privateCreds;
+    strcpy(privateCreds.ssid, config.ssid);
+    strcpy(privateCreds.pass, config.pass);
+    return privateCreds;
 }
 
 int loadConfig(){
