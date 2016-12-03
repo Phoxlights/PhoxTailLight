@@ -248,19 +248,30 @@ void enterSyncMode(){
     }
 
     // stop network so it can be restarted in
-    // connect mode
+    // appropriate mode
     if(!networkStop()){
         Serial.println("couldn't stop network");
     }
 
-    Serial.printf("OTA attempting to connect to ssid: %s, pass: %s\n",
-        PUBLIC_SSID, PUBLIC_PASS);
-
-    if(!networkConnect(PUBLIC_SSID, PUBLIC_PASS)){
-        Serial.println("couldnt connect to ota network");
-        statusLightSetPattern(status, red, pattern);
-        return;
+    // start network
+    if(config->networkMode == CONNECT){
+        Serial.printf("OTA attempting to connect to ssid: %s, pass: %s\n",
+            PUBLIC_SSID, PUBLIC_PASS);
+        if(!networkConnect(PUBLIC_SSID, PUBLIC_PASS)){
+            Serial.println("couldnt bring up network");
+            statusLightSetPattern(status, red, pattern);
+            return;
+        }
+    } else {
+        Serial.printf("OTA attempting to create ssid: %s, pass: %s\n",
+            PUBLIC_SSID, PUBLIC_PASS);
+        if(!networkCreate(PUBLIC_SSID, PUBLIC_PASS, IPAddress(SERVER_IP_UINT32))){
+            Serial.println("couldnt create network");
+            statusLightSetPattern(status, red, pattern);
+            return;
+        }
     }
+
     networkAdvertise(OTA_HOSTNAME);
     Serial.printf("OTA advertising hostname: %s\n", OTA_HOSTNAME);
 
