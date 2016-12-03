@@ -213,6 +213,12 @@ void resumeTailLight(Event * e, Request * r){
     }
 }
 
+void generateNetworkCreds(Event * e, Request * r){
+    if(!generatePrivateNetworkCreds()){
+        Serial.println("couldn't generate new network creds");
+    }
+}
+
 typedef struct Pixel {
     uint16_t x;
     uint8_t r;
@@ -379,6 +385,7 @@ void setup(){
         eventRegister(SET_DEFAULT_CONFIG, restoreDefaultConfig);
         eventRegister(SET_NETWORK_MODE, setNetworkMode);
         eventRegister(REGISTER_COMPONENT, requestRegisterComponent);
+        eventRegister(GENERATE_NETWORK_CREDS, generateNetworkCreds);
 
         eventRegister(PAUSE_TAILLIGHT, pauseTailLight);
         eventRegister(RESUME_TAILLIGHT, resumeTailLight);

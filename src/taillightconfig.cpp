@@ -6,10 +6,19 @@
 
 #define DEFAULT_CONFIG_ID 1
 
+static char ssidAndPassChars[63] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890";
+
+char randoChar(){
+    // TODO - im pretty sure this is wrong
+    unsigned int rando = (unsigned int)os_random();
+    int i = rando % 62;
+    return ssidAndPassChars[i];
+}
+
 // default config values
 TailLightConfig defaultConfig = {
-    PRIVATE_SSID,
-    PRIVATE_PASS,
+    DEFAULT_PRIVATE_SSID,
+    DEFAULT_PRIVATE_PASS,
     HOSTNAME,
     0,
     0,
@@ -41,6 +50,34 @@ PrivateNetworkCreds getPrivateCreds(){
     strcpy(privateCreds.ssid, config.ssid);
     strcpy(privateCreds.pass, config.pass);
     return privateCreds;
+}
+
+int generatePrivateNetworkCreds(){
+    char ssid[SSID_MAX];
+    char pass[PASS_MAX];
+
+    for(int i = 0; i < (SSID_MAX - 1); i++){
+        ssid[i] = randoChar();
+    }
+    ssid[SSID_MAX-1] = '\0';
+
+    for(int i = 0; i < (PASS_MAX - 1); i++){
+        pass[i] = randoChar();
+    }
+    pass[SSID_MAX-1] = '\0';
+
+    // TODO - remove this debug message
+    Serial.printf("generated new creds ssid: %s, pass: %s\n", ssid, pass);
+
+    strcpy(config.ssid, ssid);
+    strcpy(config.pass, pass);
+
+    if(!writeConfig(&config)){
+        Serial.println("failed to save newly generated network creds");
+        return 0;
+    }
+
+    return 1;
 }
 
 int loadConfig(){

@@ -27,9 +27,8 @@
 #define PUBLIC_SSID "phoxlight"
 #define PUBLIC_PASS "phoxlight"
 
-// TODO - generate these (compile-time? first run?)
-#define PRIVATE_SSID "phoxlightpriv"
-#define PRIVATE_PASS "phoxlightpriv"
+#define DEFAULT_PRIVATE_SSID "phoxlightpriv"
+#define DEFAULT_PRIVATE_PASS "phoxlightpriv"
 
 typedef struct TailLightConfig {
     char ssid[SSID_MAX];
@@ -54,6 +53,7 @@ int loadConfig();
 int writeConfig(TailLightConfig * c);
 void logConfig(TailLightConfig * c);
 int writeDefaultConfig();
+int generatePrivateNetworkCreds();
 
 int registerComponent(Identity * component);
 // TODO - removeComponent
