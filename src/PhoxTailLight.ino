@@ -233,6 +233,46 @@ void setPixel(Event * e, Request * r){
     tailLightSetPixel(tailLight, p->x, rgb);
 }
 
+// events to listen for in run mode
+int startRunListeners(){
+    int ok = eventListen(EVENT_VER, EVENT_PORT);
+    if(ok){
+        eventRegister(SIGNAL_R_ON, startTurnSignalRight);
+        eventRegister(SIGNAL_R_OFF, stopTurnSignalRight);
+        eventRegister(SIGNAL_L_ON, startTurnSignalLeft);
+        eventRegister(SIGNAL_L_OFF, stopTurnSignalLeft);
+        eventRegister(BRAKE_ON, startBrakeLayer);
+        eventRegister(BRAKE_OFF, stopBrakeLayer);
+        eventRegister(PING, ping);
+        eventRegister(WHO, who);
+        eventRegister(NEXT_PRESET, setNextPreset);
+
+        eventRegister(PAUSE_TAILLIGHT, pauseTailLight);
+        eventRegister(RESUME_TAILLIGHT, resumeTailLight);
+        eventRegister(SET_PIXEL, setPixel);
+
+        Serial.printf("Listening for events with EVENT_VER: %i, eventPort: %i\n",
+            EVENT_VER, EVENT_PORT);
+    }
+    return ok;
+}
+
+// events to listen for in sync mode
+int startSyncListeners(){
+    int ok = eventListen(EVENT_VER, EVENT_PORT);
+    if(ok){
+        eventRegister(SET_TAILLIGHT_OFFSET, setTaillightOffset);
+        eventRegister(SET_DEFAULT_CONFIG, restoreDefaultConfig);
+        eventRegister(SET_NETWORK_MODE, setNetworkMode);
+        eventRegister(REGISTER_COMPONENT, requestRegisterComponent);
+        eventRegister(GENERATE_NETWORK_CREDS, generateNetworkCreds);
+
+        Serial.printf("Listening for events with EVENT_VER: %i, eventPort: %i\n",
+            EVENT_VER, EVENT_PORT);
+    }
+    return ok;
+}
+
 bool canOTA = true;
 void neverOTAEver(){
     // button was released after boot, 
@@ -281,13 +321,9 @@ void enterSyncMode(){
     networkAdvertise(OTA_HOSTNAME);
     Serial.printf("OTA advertising hostname: %s\n", OTA_HOSTNAME);
 
-    // enable SET_NETWORK_MODE endpoint just in case it isnt,
-    // this way a device with NETWORK_MODE off will be able to
-    // be turned back on
-    eventListen(EVENT_VER, EVENT_PORT);
-    eventRegister(SET_NETWORK_MODE, setNetworkMode);
-    Serial.printf("Listening for SET_NETWORK_MODE with EVENT_VER: %i, eventPort: %i\n",
-        EVENT_VER, EVENT_PORT);
+    if(!startSyncListeners()){
+        Serial.println("couldnt start listening for events");
+    }
 
     // ota
     otaOnStart(&otaStarted);
@@ -368,28 +404,8 @@ void setup(){
         Serial.println("couldnt setup status light");
     }
 
-    if(eventListen(EVENT_VER, EVENT_PORT)){
-        eventRegister(SIGNAL_R_ON, startTurnSignalRight);
-        eventRegister(SIGNAL_R_OFF, stopTurnSignalRight);
-        eventRegister(SIGNAL_L_ON, startTurnSignalLeft);
-        eventRegister(SIGNAL_L_OFF, stopTurnSignalLeft);
-        eventRegister(BRAKE_ON, startBrakeLayer);
-        eventRegister(BRAKE_OFF, stopBrakeLayer);
-        eventRegister(PING, ping);
-        eventRegister(WHO, who);
-        eventRegister(NEXT_PRESET, setNextPreset);
-
-        // these should eventually go to a safer API
-        // (maybe in OTA mode only or something)
-        eventRegister(SET_TAILLIGHT_OFFSET, setTaillightOffset);
-        eventRegister(SET_DEFAULT_CONFIG, restoreDefaultConfig);
-        eventRegister(SET_NETWORK_MODE, setNetworkMode);
-        eventRegister(REGISTER_COMPONENT, requestRegisterComponent);
-        eventRegister(GENERATE_NETWORK_CREDS, generateNetworkCreds);
-
-        eventRegister(PAUSE_TAILLIGHT, pauseTailLight);
-        eventRegister(RESUME_TAILLIGHT, resumeTailLight);
-        eventRegister(SET_PIXEL, setPixel);
+    if(!startRunListeners()){
+        Serial.println("couldnt start listening for events");
     }
 
     // TODO HACK REMOVE
