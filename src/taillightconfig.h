@@ -18,8 +18,8 @@
 // for a controller
 #define MAX_COMPONENTS 10
 
-// 192.168.4.1
-#define SERVER_IP_UINT32 3232236545
+// 192.168.4.1 17082560
+#define SERVER_IP_UINT32 17082560
 
 #define HOSTNAME "phoxtail"
 #define OTA_HOSTNAME "phoxlightota"
