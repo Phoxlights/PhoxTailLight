@@ -15,6 +15,8 @@
 #include <taillight.h>
 #include <taillightconfig.h>
 
+#define DEV_MODE 1
+
 void asplode(char * err){
     Serial.printf("ERROR: %s\n", err);
     delay(1000);
@@ -408,12 +410,18 @@ void setup(){
         Serial.println("couldnt start listening for events");
     }
 
-    // TODO HACK REMOVE
-    otaOnStart(&otaStarted);
-    otaOnProgress(&otaProgress);
-    otaOnError(&otaError);
-    otaOnEnd(&otaEnd);
-    otaStart();
+    // NOTE - this stuff is unsafe for run mode! make sure
+    // DEV_MODE is off in production!
+    if(DEV_MODE){
+        if(!startSyncListeners()){
+            Serial.println("couldnt start sync mode listeners");
+        }
+        otaOnStart(&otaStarted);
+        otaOnProgress(&otaProgress);
+        otaOnError(&otaError);
+        otaOnEnd(&otaEnd);
+        otaStart();
+    }
 
     byte orange[3] = {20,20,0};
     if(!statusLightSetPattern(status, orange, pattern)){

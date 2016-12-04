@@ -9,9 +9,7 @@
 static char ssidAndPassChars[63] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890";
 
 char randoChar(){
-    // TODO - im pretty sure this is wrong
-    unsigned int rando = (unsigned int)os_random();
-    int i = rando % 62;
+    int i = secureRandom(0,62);
     return ssidAndPassChars[i];
 }
 
