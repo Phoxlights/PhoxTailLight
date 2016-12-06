@@ -268,6 +268,8 @@ int startSyncListeners(){
         eventRegister(SET_NETWORK_MODE, setNetworkMode);
         eventRegister(REGISTER_COMPONENT, requestRegisterComponent);
         eventRegister(GENERATE_NETWORK_CREDS, generateNetworkCreds);
+        eventRegister(PING, ping);
+        eventRegister(WHO, who);
 
         Serial.printf("Listening for events with EVENT_VER: %i, eventPort: %i\n",
             EVENT_VER, EVENT_PORT);
