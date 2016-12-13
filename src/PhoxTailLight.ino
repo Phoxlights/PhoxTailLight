@@ -277,12 +277,26 @@ int startSyncListeners(){
     return ok;
 }
 
-bool canOTA = true;
-void neverOTAEver(){
-    // button was released after boot, 
-    // so don't allow OTA mode to happen
-    canOTA = false;
+int shouldEnterSyncMode(){
+    int buttonPosition;
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    digitalWrite(BUTTON_PIN, HIGH);
+    buttonPosition = digitalRead(BUTTON_PIN);
+
+    for(int i = 0; i < 5; i++){
+        if(buttonPosition == HIGH){
+            return 0;
+        }
+        delay(200);
+    }
+
+    if(buttonPosition == HIGH){
+        return 0;
+    }
+
+    return 1;
 }
+
 void enterSyncMode(){
     Serial.println("entering sync mode");
 
@@ -345,7 +359,6 @@ void enterSyncMode(){
 
 void setup(){
     Serial.begin(115200);
-    delay(1000);
     Serial.println("\n");
 
     setupStartHeap = ESP.getFreeHeap();
@@ -367,6 +380,21 @@ void setup(){
     byte blue[3] = {0,0,40};
     if(!statusLightSetPattern(status, blue, pattern)){
         Serial.println("couldnt setup status light");
+    }
+
+    // start up taillight
+    tailLight = tailLightCreate(TAIL_PIN, NUM_PX, 1.0, config->offset);
+    if(tailLight == NULL){
+        asplode("couldnt create taillight");
+    }
+    if(!tailLightStart(tailLight)){
+        asplode("couldnt start taillight");
+    }
+
+    if(shouldEnterSyncMode()){
+        Serial.println("going to sync mode");
+        enterSyncMode();
+        return;
     }
 
     // start network
@@ -430,15 +458,6 @@ void setup(){
         Serial.println("couldnt setup status light");
     }
 
-    // start up taillight
-    tailLight = tailLightCreate(TAIL_PIN, NUM_PX, 1.0, config->offset);
-    if(tailLight == NULL){
-        asplode("couldnt create taillight");
-    }
-    if(!tailLightStart(tailLight)){
-        asplode("couldnt start taillight");
-    }
-
     // load last selected preset
     tailLightLoadPreset(tailLight, config->currentPreset);
 
@@ -447,9 +466,6 @@ void setup(){
     // switch presets
     DigitalButton btn = buttonCreate(BUTTON_PIN, 50);
     buttonOnTap(btn, nextPreset);
-    // OTA mode
-    buttonOnUp(btn, neverOTAEver);
-    buttonOnHold(btn, enterSyncMode, 4000);
 
     // debug log heap usage so i can keep an eye out for leaks
     setupEndHeap = ESP.getFreeHeap();
