@@ -305,7 +305,6 @@ void enterSyncMode(){
     // stop taillight
     tailLightStop(tailLight);
 
-
     setEnterSyncStatusLight(status);
     // keep flashing sync status light
     // till user releases button
