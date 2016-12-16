@@ -13,18 +13,10 @@
 #include <objstore.h>
 #include <event.h>
 #include <taillight.h>
+#include <taillightconfig.h>
+#include "status.h"
 
-#define OTA_SSID "phoxlight"
-#define OTA_PASS "phoxlight"
-#define OTA_HOSTNAME "phoxlightota"
-
-#define DB_VER 2
-#define EVENT_VER 2
-#define NUM_PX 16
-#define TAIL_PIN 2
-#define EVENT_PORT 6767
-#define BUTTON_PIN 14
-#define STATUS_PIN 2
+#define DEV_MODE 0
 
 void asplode(char * err){
     Serial.printf("ERROR: %s\n", err);
@@ -32,97 +24,10 @@ void asplode(char * err){
     ESP.restart();
 }
 
-typedef struct Identity {
-    uint32_t model;
-    uint32_t serial;
-    uint16_t bin;
-    uint16_t eventVer;
-    uint16_t dbVer;
-} Identity;
-
-Identity id = {
-    .model = 1000,
-    .serial = ESP.getChipId(),
-    .bin = 7,
-    .eventVer = EVENT_VER,
-    .dbVer = DB_VER
-};
-
-typedef struct TailLightConfig {
-    char ssid[SSID_MAX];
-    char pass[PASS_MAX];
-    char hostname[HOSTNAME_MAX];
-    int currentPreset;
-    int offset;
-    NetworkMode networkMode;
-} TailLightConfig;
-
-// default config values
-TailLightConfig defaultConfig = {
-    "phoxlight",
-    "phoxlight",
-    "phoxlight",
-    0,
-    0,
-    CONNECT,
-};
-
-int configId = 1;
-TailLightConfig config;
 TailLight tailLight;
-
 StatusLight status;
-
-int writeDefaultConfig(){
-    // delete existing taillight config
-    Serial.println("wiping taillight config");
-    objStoreWipe("taillight");
-
-    int id = objStoreCreate("taillight", &defaultConfig, sizeof(TailLightConfig));
-    if(!id){
-        Serial.println("failed to write default config");
-        return 0;
-    }
-    Serial.printf("wrote default taillight config, with id %i\n", id);
-    return 1;
-}
-
-int writeCurrentConfig(){
-    if(!objStoreUpdate("taillight", configId, &config, sizeof(TailLightConfig))){
-        Serial.println("failed to write config");
-        return 0;
-    }
-    return 1;
-}
-
-int loadConfig(){
-    // load from fs
-    objStoreInit(DB_VER);
-    if(!objStoreGet("taillight", configId, &config, sizeof(TailLightConfig))){
-        // store defaults
-        Serial.println("taillight config not found, storing defaults");
-        if(!writeDefaultConfig()){
-            asplode("couldnt store default taillight config. prepare your butt.");
-        }
-        // reload config now that we have defaults
-        loadConfig();
-    }
-    return 1;
-}
-
-void logConfig(){
-    Serial.printf("\
-config: {\n\
-    ssid: %s,\n\
-    hostname: %s,\n\
-    currentPreset: %i,\n\
-    offset: %i,\n\
-    networkMode: %s,\n\
-}\n", 
-    config.ssid, config.hostname,
-    config.currentPreset, config.offset,
-    config.networkMode == 0 ? "CONNECT" : config.networkMode == 1 ? "CREATE" : "OFF");
-}
+TailLightConfig * config = getConfig();
+Identity * id = getIdentity();
 
 void otaStarted(){
     Serial.println("ota start");
@@ -158,8 +63,8 @@ void otaEnd(){
 void nextPreset(){
     tailLightNextPreset(tailLight);
     int presetIndex = tailLightGetPresetIndex(tailLight);
-    config.currentPreset = presetIndex;
-    writeCurrentConfig();
+    config->currentPreset = presetIndex;
+    writeConfig(config);
 }
 
 int setupStartHeap, setupEndHeap, prevHeap;
@@ -212,7 +117,6 @@ void stopTurnSignalLeft(Event * e, Request * r){
     }
 }
 void startBrakeLayer(Event * e, Request * r){
-    Serial.println("asdf");
     brakeOn = true;
     tailLightLayerStart(tailLight, BRAKE);
     tailLightLayerStop(tailLight, RUNNING);
@@ -230,18 +134,18 @@ void setNextPreset(Event * e, Request * r){
 }
 
 void setTaillightOffset(Event * e, Request * r){
-    int newOffset = (config.offset+1) % NUM_PX;
+    int newOffset = (config->offset+1) % NUM_PX;
     Serial.printf("setting taillight offset to %i\n", newOffset); 
     tailLightSetOffset(tailLight, newOffset);
-    config.offset = newOffset;
-    writeCurrentConfig();
+    config->offset = newOffset;
+    writeConfig(config);
 }
 
 void setNetworkMode(Event * e, Request * r){
     int mode = (e->body[1] << 8) + e->body[0];
     Serial.printf("setting network mode to %i\n", mode); 
-    config.networkMode = (NetworkMode)mode;
-    writeCurrentConfig();
+    config->networkMode = (NetworkMode)mode;
+    writeConfig(config);
     delay(100);
     flash();
 }
@@ -276,6 +180,30 @@ void who(Event * e, Request * r){
     }
 }
 
+void requestRegisterComponent(Event * e, Request * r){
+    Serial.printf("someone wants me to register a thing\n");
+    // TODO - i suspect some sort of sanitization
+    // and bounds checking should occur here
+    Identity * component = (Identity*)e->body;
+    if(!registerComponent(component)){
+        Serial.printf("failed to register component\n");
+        return;
+    }
+
+    // persist new config to disk
+    if(!writeConfig(config)){
+        Serial.printf("failed to write config to disk\n");
+    }
+
+    PrivateNetworkCreds creds = getPrivateCreds();
+    Serial.printf("ssid: %s, pass: %s\n", creds.ssid, creds.pass);
+    if(!eventSendC(r->client, EVENT_VER, REGISTER_CONFIRM, sizeof(PrivateNetworkCreds), (void*)&creds, NULL)){
+        Serial.printf("failed to respond to registration request\n");
+        return;
+    }
+    flash();
+}
+
 void pauseTailLight(Event * e, Request * r){
     if(!tailLightPause(tailLight)){
         Serial.println("couldn't pause the taillight");
@@ -285,6 +213,12 @@ void pauseTailLight(Event * e, Request * r){
 void resumeTailLight(Event * e, Request * r){
     if(!tailLightStart(tailLight)){
         Serial.println("couldn't resume the taillight");
+    }
+}
+
+void generateNetworkCreds(Event * e, Request * r){
+    if(!generatePrivateNetworkCreds()){
+        Serial.println("couldn't generate new network creds");
     }
 }
 
@@ -302,131 +236,10 @@ void setPixel(Event * e, Request * r){
     tailLightSetPixel(tailLight, p->x, rgb);
 }
 
-bool canOTA = true;
-void neverOTAEver(){
-    // button was released after boot, 
-    // so don't allow OTA mode to happen
-    canOTA = false;
-}
-void enterOTAMode(){
-    Serial.println("entering OTA mode");
-
-    // stop taillight
-    tailLightStop(tailLight);
-
-    // status light
-    byte blue[3] = {0,0,40};
-    byte red[3] = {40,0,0};
-    int pattern[] = {500,50,0};
-    if(!statusLightSetPattern(status, blue, pattern)){
-        Serial.println("couldnt setup status light");
-    }
-
-    // stop network so it can be restarted in
-    // connect mode
-    if(!networkStop()){
-        Serial.println("couldn't stop network");
-    }
-
-    Serial.printf("OTA attempting to connect to ssid: %s, pass: %s\n",
-        OTA_SSID, OTA_PASS);
-
-    if(!networkConnect(OTA_SSID, OTA_PASS)){
-        Serial.println("couldnt connect to ota network");
-        statusLightSetPattern(status, red, pattern);
-        return;
-    }
-    networkAdvertise(OTA_HOSTNAME);
-    Serial.printf("OTA advertising hostname: %s\n", OTA_HOSTNAME);
-
-    // enable SET_NETWORK_MODE endpoint just in case it isnt,
-    // this way a device with NETWORK_MODE off will be able to
-    // be turned back on
-    eventListen(EVENT_VER, EVENT_PORT);
-    eventRegister(SET_NETWORK_MODE, setNetworkMode);
-    Serial.printf("Listening for SET_NETWORK_MODE with EVENT_VER: %i, eventPort: %i\n",
-        EVENT_VER, EVENT_PORT);
-
-    // ota
-    otaOnStart(&otaStarted);
-    otaOnProgress(&otaProgress);
-    otaOnError(&otaError);
-    otaOnEnd(&otaEnd);
-    otaStart();
-
-    byte green[3] = {0,40,0};
-    int pattern2[] = {3000,50,0};
-    if(!statusLightSetPattern(status, green, pattern2)){
-        Serial.println("couldnt setup status light");
-    }
-}
-
-void setup(){
-    Serial.begin(115200);
-    delay(1000);
-    Serial.println("\n");
-
-    setupStartHeap = ESP.getFreeHeap();
-    Serial.printf("setupStartHeap: %i\n", setupStartHeap);
-
-    status = statusLightCreate(STATUS_PIN, 16);
-
-    byte purple[3] = {20,0,20};
-    int pattern[] = {1000,50,0};
-    if(!statusLightSetPattern(status, purple, pattern)){
-        Serial.println("couldnt setup status light");
-    }
-
-    // load config from fs
-    loadConfig();
-    logConfig();
-
-    // status light
-    byte blue[3] = {0,0,40};
-    if(!statusLightSetPattern(status, blue, pattern)){
-        Serial.println("couldnt setup status light");
-    }
-
-    // start network
-    switch(config.networkMode){
-        case CONNECT:
-            if(!networkConnect(config.ssid, config.pass)){
-                Serial.println("couldnt bring up network");
-            }
-            networkAdvertise(config.hostname);
-            break;
-        case CREATE:
-            if(!networkCreate(config.ssid, config.pass, IPAddress(192,168,4,1))){
-                Serial.println("couldnt create up network");
-            }
-            networkAdvertise(config.hostname);
-            break;
-        case OFF:
-            Serial.println("turning network off");
-            if(!networkOff()){
-                Serial.println("couldnt turn off network");
-            }
-            break;
-        default:
-            Serial.println("couldnt load network mode, defaulting to CONNECT");
-            if(!networkConnect(config.ssid, config.pass)){
-                Serial.println("couldnt bring up network");
-            }
-            networkAdvertise(config.hostname);
-            break;
-    }
-
-    byte green[3] = {0,40,0};
-    if(!statusLightSetPattern(status, green, pattern)){
-        Serial.println("couldnt setup status light");
-    }
-
-    byte yellow[3] = {20,20,20};
-    if(!statusLightSetPattern(status, yellow, pattern)){
-        Serial.println("couldnt setup status light");
-    }
-
-    if(eventListen(EVENT_VER, EVENT_PORT)){
+// events to listen for in run mode
+int startRunListeners(){
+    int ok = eventListen(EVENT_VER, EVENT_PORT);
+    if(ok){
         eventRegister(SIGNAL_R_ON, startTurnSignalRight);
         eventRegister(SIGNAL_R_OFF, stopTurnSignalRight);
         eventRegister(SIGNAL_L_ON, startTurnSignalLeft);
@@ -437,24 +250,135 @@ void setup(){
         eventRegister(WHO, who);
         eventRegister(NEXT_PRESET, setNextPreset);
 
-        // these should eventually go to a safer API
-        // (maybe in OTA mode only or something)
-        eventRegister(SET_TAILLIGHT_OFFSET, setTaillightOffset);
-        eventRegister(SET_DEFAULT_CONFIG, restoreDefaultConfig);
-        eventRegister(SET_NETWORK_MODE, setNetworkMode);
-
         eventRegister(PAUSE_TAILLIGHT, pauseTailLight);
         eventRegister(RESUME_TAILLIGHT, resumeTailLight);
         eventRegister(SET_PIXEL, setPixel);
+
+        Serial.printf("Listening for events with EVENT_VER: %i, eventPort: %i\n",
+            EVENT_VER, EVENT_PORT);
+    }
+    return ok;
+}
+
+// events to listen for in sync mode
+int startSyncListeners(){
+    int ok = eventListen(EVENT_VER, EVENT_PORT);
+    if(ok){
+        eventRegister(SET_TAILLIGHT_OFFSET, setTaillightOffset);
+        eventRegister(SET_DEFAULT_CONFIG, restoreDefaultConfig);
+        eventRegister(SET_NETWORK_MODE, setNetworkMode);
+        eventRegister(REGISTER_COMPONENT, requestRegisterComponent);
+        eventRegister(GENERATE_NETWORK_CREDS, generateNetworkCreds);
+        eventRegister(PING, ping);
+        eventRegister(WHO, who);
+
+        Serial.printf("Listening for events with EVENT_VER: %i, eventPort: %i\n",
+            EVENT_VER, EVENT_PORT);
+    }
+    return ok;
+}
+
+int shouldEnterSyncMode(){
+    int buttonPosition;
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    digitalWrite(BUTTON_PIN, HIGH);
+
+    for(int i = 0; i < 5; i++){
+        buttonPosition = digitalRead(BUTTON_PIN);
+        if(buttonPosition == HIGH){
+            return 0;
+        }
+        delay(200);
     }
 
-    byte orange[3] = {20,20,0};
-    if(!statusLightSetPattern(status, orange, pattern)){
-        Serial.println("couldnt setup status light");
+    buttonPosition = digitalRead(BUTTON_PIN);
+    if(buttonPosition == HIGH){
+        return 0;
     }
+
+    return 1;
+}
+
+void enterSyncMode(){
+    Serial.println("entering sync mode");
+
+    // stop taillight
+    tailLightStop(tailLight);
+
+    setEnterSyncStatusLight(status);
+    // keep flashing sync status light
+    // till user releases button
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    digitalWrite(BUTTON_PIN, HIGH);
+    while(digitalRead(BUTTON_PIN) == LOW){
+       delay(200); 
+    }
+
+    setNetworkConnectStatusLight(status);
+    // stop network so it can be restarted in
+    // appropriate mode
+    if(!networkStop()){
+        Serial.println("couldn't stop network");
+    }
+
+    // start network
+    if(config->networkMode == CONNECT){
+        Serial.printf("OTA attempting to connect to ssid: %s, pass: %s\n",
+            PUBLIC_SSID, PUBLIC_PASS);
+        if(!networkConnect(PUBLIC_SSID, PUBLIC_PASS)){
+            Serial.println("couldnt bring up network");
+            flashFailStatusLight(status);
+            return;
+        }
+    } else {
+        Serial.printf("OTA attempting to create ssid: %s, pass: %s\n",
+            PUBLIC_SSID, PUBLIC_PASS);
+        if(!networkCreate(PUBLIC_SSID, PUBLIC_PASS, IPAddress(SERVER_IP_UINT32))){
+            Serial.println("couldnt create network");
+            flashFailStatusLight(status);
+            return;
+        }
+    }
+
+    networkAdvertise(OTA_HOSTNAME);
+    Serial.printf("OTA advertising hostname: %s\n", OTA_HOSTNAME);
+
+    if(!startSyncListeners()){
+        Serial.println("couldnt start listening for events");
+    }
+
+    // ota
+    otaOnStart(&otaStarted);
+    otaOnProgress(&otaProgress);
+    otaOnError(&otaError);
+    otaOnEnd(&otaEnd);
+    otaStart();
+
+    byte green[3] = {0,40,0};
+    int pattern2[] = {3000,50,0};
+
+    flashSuccessStatusLight(status);
+    setIdleStatusLight(status);
+}
+
+void setup(){
+    Serial.begin(115200);
+    Serial.println("\n");
+
+    setupStartHeap = ESP.getFreeHeap();
+    Serial.printf("setupStartHeap: %i\n", setupStartHeap);
+
+    status = statusLightCreate(STATUS_PIN, 16);
+    setFSWriteStatusLight(status);
+
+    // load config from fs
+    loadConfig();
+    logConfig(config);
+
+    setMiscStatusLight(status);
 
     // start up taillight
-    tailLight = tailLightCreate(TAIL_PIN, NUM_PX, 1.0, config.offset);
+    tailLight = tailLightCreate(TAIL_PIN, NUM_PX, 1.0, config->offset);
     if(tailLight == NULL){
         asplode("couldnt create taillight");
     }
@@ -462,17 +386,70 @@ void setup(){
         asplode("couldnt start taillight");
     }
 
+    if(shouldEnterSyncMode()){
+        Serial.println("going to sync mode");
+        enterSyncMode();
+        return;
+    }
+
+    setNetworkConnectStatusLight(status);
+
+    // start network
+    switch(config->networkMode){
+        case CONNECT:
+            if(!networkConnect(config->ssid, config->pass)){
+                Serial.println("couldnt bring up network");
+            }
+            networkAdvertise(config->hostname);
+            break;
+        case CREATE:
+            if(!networkCreate(config->ssid, config->pass, IPAddress(SERVER_IP_UINT32))){
+                Serial.println("couldnt create up network");
+            }
+            networkAdvertise(config->hostname);
+            break;
+        case OFF:
+            Serial.println("turning network off");
+            if(!networkOff()){
+                Serial.println("couldnt turn off network");
+            }
+            break;
+        default:
+            Serial.println("couldnt load network mode, defaulting to CONNECT");
+            if(!networkConnect(config->ssid, config->pass)){
+                Serial.println("couldnt bring up network");
+            }
+            networkAdvertise(config->hostname);
+            break;
+    }
+
+    if(!startRunListeners()){
+        Serial.println("couldnt start listening for events");
+    }
+
+    // NOTE - this stuff is unsafe for run mode! make sure
+    // DEV_MODE is off in production!
+    if(DEV_MODE){
+        if(!startSyncListeners()){
+            Serial.println("couldnt start sync mode listeners");
+        }
+        otaOnStart(&otaStarted);
+        otaOnProgress(&otaProgress);
+        otaOnError(&otaError);
+        otaOnEnd(&otaEnd);
+        otaStart();
+    }
+
+    setFSWriteStatusLight(status);
+
     // load last selected preset
-    tailLightLoadPreset(tailLight, config.currentPreset);
+    tailLightLoadPreset(tailLight, config->currentPreset);
 
     statusLightStop(status);
 
     // switch presets
     DigitalButton btn = buttonCreate(BUTTON_PIN, 50);
     buttonOnTap(btn, nextPreset);
-    // OTA mode
-    buttonOnUp(btn, neverOTAEver);
-    buttonOnHold(btn, enterOTAMode, 4000);
 
     // debug log heap usage so i can keep an eye out for leaks
     setupEndHeap = ESP.getFreeHeap();

@@ -1,6 +1,9 @@
 THIS_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 ROOT := $(THIS_DIR)
 
+# OTA IP
+ESP_ADDR ?= 192.168.43.20
+
 ESP_MAKE=$(HOME)/src/makeEspArduino
 ESP_LIBS=$(HOME)/src/ArduinoEsp/libraries
 
@@ -18,7 +21,7 @@ build: all
 	mkdir -p $(ROOT)/build && \
 	cp $(MAIN_EXE) $(ROOT)/build
 
-DEVICE = 0
+DEVICE ?= 0
 
 send_message:
 	cat $(MESSAGE) | netcat $(MESSAGE_RECIPIENT_IP) $(MESSAGE_SERVER_PORT) 
