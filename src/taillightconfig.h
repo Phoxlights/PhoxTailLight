@@ -12,7 +12,7 @@
 #define BUTTON_PIN 14
 #define STATUS_PIN 2
 // TODO - get BIN_VERSION from VERSION file
-#define BIN_VERSION 12
+#define BIN_VERSION 13
 
 // number of components that can be registered
 // for a controller

@@ -1,3 +1,49 @@
+0.1.13
+===========
+### Changes
+* move identity and config into separate package
+* add component registry
+* generate ssid and pass
+* enter sync mode faster
+* improved status light colors and patterns
+
+### Config
+tail pin 2
+button pin 14
+status pin 2
+connects to network with ssid phoxlightpriv, pass phoxlightpriv
+hostname phoxtail
+sync mode (button hold), connects to ssid phoxlight, pass phoxlight
+ota hostname phoxlightota
+event version 2
+event port 6767
+db ver 3
+
+### Commands
+* ping
+* who
+* signalron
+* signalroff
+* signallon
+* signalloff
+* brakeon
+* brakeoff
+* setnextpreset
+* setdefaultconfig
+* setbuttonpin
+* settailpin
+* setstatuspin
+* settaillightoffset
+* setnetworkmode
+* pausetaillight
+* resumetaillight
+* registercomponent
+* generatenetworkcreds
+
+0.1.12
+===========
+Doesnt exist because im dumb
+
 0.1.11
 ===========
 ### Changes
