@@ -14,8 +14,9 @@
 #include <event.h>
 #include <taillight.h>
 #include <taillightconfig.h>
+#include "status.h"
 
-#define DEV_MODE 1
+#define DEV_MODE 0
 
 void asplode(char * err){
     Serial.printf("ERROR: %s\n", err);
@@ -281,15 +282,16 @@ int shouldEnterSyncMode(){
     int buttonPosition;
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     digitalWrite(BUTTON_PIN, HIGH);
-    buttonPosition = digitalRead(BUTTON_PIN);
 
     for(int i = 0; i < 5; i++){
+        buttonPosition = digitalRead(BUTTON_PIN);
         if(buttonPosition == HIGH){
             return 0;
         }
         delay(200);
     }
 
+    buttonPosition = digitalRead(BUTTON_PIN);
     if(buttonPosition == HIGH){
         return 0;
     }
@@ -303,14 +305,17 @@ void enterSyncMode(){
     // stop taillight
     tailLightStop(tailLight);
 
-    // status light
-    byte blue[3] = {0,0,40};
-    byte red[3] = {40,0,0};
-    int pattern[] = {500,50,0};
-    if(!statusLightSetPattern(status, blue, pattern)){
-        Serial.println("couldnt setup status light");
+
+    setEnterSyncStatusLight(status);
+    // keep flashing sync status light
+    // till user releases button
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    digitalWrite(BUTTON_PIN, HIGH);
+    while(digitalRead(BUTTON_PIN) == LOW){
+       delay(200); 
     }
 
+    setNetworkConnectStatusLight(status);
     // stop network so it can be restarted in
     // appropriate mode
     if(!networkStop()){
@@ -323,7 +328,7 @@ void enterSyncMode(){
             PUBLIC_SSID, PUBLIC_PASS);
         if(!networkConnect(PUBLIC_SSID, PUBLIC_PASS)){
             Serial.println("couldnt bring up network");
-            statusLightSetPattern(status, red, pattern);
+            flashFailStatusLight(status);
             return;
         }
     } else {
@@ -331,7 +336,7 @@ void enterSyncMode(){
             PUBLIC_SSID, PUBLIC_PASS);
         if(!networkCreate(PUBLIC_SSID, PUBLIC_PASS, IPAddress(SERVER_IP_UINT32))){
             Serial.println("couldnt create network");
-            statusLightSetPattern(status, red, pattern);
+            flashFailStatusLight(status);
             return;
         }
     }
@@ -352,9 +357,9 @@ void enterSyncMode(){
 
     byte green[3] = {0,40,0};
     int pattern2[] = {3000,50,0};
-    if(!statusLightSetPattern(status, green, pattern2)){
-        Serial.println("couldnt setup status light");
-    }
+
+    flashSuccessStatusLight(status);
+    setIdleStatusLight(status);
 }
 
 void setup(){
@@ -365,22 +370,13 @@ void setup(){
     Serial.printf("setupStartHeap: %i\n", setupStartHeap);
 
     status = statusLightCreate(STATUS_PIN, 16);
-
-    byte purple[3] = {20,0,20};
-    int pattern[] = {1000,50,0};
-    if(!statusLightSetPattern(status, purple, pattern)){
-        Serial.println("couldnt setup status light");
-    }
+    setFSWriteStatusLight(status);
 
     // load config from fs
     loadConfig();
     logConfig(config);
 
-    // status light
-    byte blue[3] = {0,0,40};
-    if(!statusLightSetPattern(status, blue, pattern)){
-        Serial.println("couldnt setup status light");
-    }
+    setMiscStatusLight(status);
 
     // start up taillight
     tailLight = tailLightCreate(TAIL_PIN, NUM_PX, 1.0, config->offset);
@@ -396,6 +392,8 @@ void setup(){
         enterSyncMode();
         return;
     }
+
+    setNetworkConnectStatusLight(status);
 
     // start network
     switch(config->networkMode){
@@ -426,16 +424,6 @@ void setup(){
             break;
     }
 
-    byte green[3] = {0,40,0};
-    if(!statusLightSetPattern(status, green, pattern)){
-        Serial.println("couldnt setup status light");
-    }
-
-    byte yellow[3] = {20,20,20};
-    if(!statusLightSetPattern(status, yellow, pattern)){
-        Serial.println("couldnt setup status light");
-    }
-
     if(!startRunListeners()){
         Serial.println("couldnt start listening for events");
     }
@@ -453,10 +441,7 @@ void setup(){
         otaStart();
     }
 
-    byte orange[3] = {20,20,0};
-    if(!statusLightSetPattern(status, orange, pattern)){
-        Serial.println("couldnt setup status light");
-    }
+    setFSWriteStatusLight(status);
 
     // load last selected preset
     tailLightLoadPreset(tailLight, config->currentPreset);

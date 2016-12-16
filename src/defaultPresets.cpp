@@ -172,14 +172,14 @@ int defaultPresetsWrite(){
 
 
 // TODO - put these someplace and share em
-byte RED[] = {255,0,0,255};
-byte ORANGE[] = {255,255,0,255};
-byte GREEN[] = {0,255,0,255};
-byte BLUE[] = {0,0,255,255};
-byte YELLOW[] = {255,255,0,255};
-byte PURPLE[] = {255,0,255,255};
-byte WHITE[] = {255,255,255,255};
-byte BLACK[] = {0,0,0,255};
+static byte RED[] = {255,0,0,255};
+static byte ORANGE[] = {255,255,0,255};
+static byte GREEN[] = {0,255,0,255};
+static byte BLUE[] = {0,0,255,255};
+static byte YELLOW[] = {255,255,0,255};
+static byte PURPLE[] = {255,0,255,255};
+static byte WHITE[] = {255,255,255,255};
+static byte BLACK[] = {0,0,0,255};
 
 // hardcoded presets
 static void addPulseLayer(AnimatorLayer l, int numPx, byte * color){
